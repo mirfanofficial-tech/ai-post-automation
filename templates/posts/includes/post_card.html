@@ -1,0 +1,59 @@
+{# Reusable post card. Usage: {% include "posts/includes/post_card.html" with post=post %} #}
+{% load post_tags %}
+<article class="bg-white rounded-2xl border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all duration-200 overflow-hidden group">
+
+  {# Thumbnail strip — show first image if available #}
+  {% with thumb=post.media.all.0 %}
+  {% if thumb %}
+  <div class="h-36 bg-slate-100 overflow-hidden">
+    <img src="{{ thumb.file.url }}"
+         alt="Post image"
+         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="p-5">
+    {# Status + date row #}
+    <div class="flex items-center justify-between gap-2 mb-3">
+      {% status_badge post.status %}
+      <span class="text-xs text-slate-400">{{ post.created_at|date:"M j, Y" }}</span>
+    </div>
+
+    {# Title / snippet #}
+    {% if post.title %}
+    <h3 class="font-semibold text-slate-800 text-sm mb-1 truncate">{{ post.title }}</h3>
+    {% endif %}
+    <p class="text-slate-500 text-xs leading-relaxed line-clamp-3">{{ post.content_plain }}</p>
+
+    {# Hashtags #}
+    {% if post.hashtags %}
+    <p class="mt-2 text-violet-500 text-xs truncate">{{ post.hashtags }}</p>
+    {% endif %}
+
+    {# Footer — platforms + actions #}
+    <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+
+      {# Platform dots #}
+      <div class="flex items-center gap-1.5">
+        {% for target in post.targets.all %}
+        <span class="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-50 rounded-full px-2 py-0.5 border border-slate-200">
+          {{ target.social_account.platform.name }}
+        </span>
+        {% empty %}
+        <span class="text-xs text-slate-400 italic">No platforms selected</span>
+        {% endfor %}
+      </div>
+
+      {# View link #}
+      {% if "can_view_posts" in user_permissions %}
+      <a href="{% url 'posts:post_detail' post.pk %}"
+         class="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium transition">
+        View
+        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+</article>

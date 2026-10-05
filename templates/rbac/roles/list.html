@@ -1,0 +1,100 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}Roles{% endblock %}
+{% block page_title %}Roles{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="mb-0 fw-semibold">Roles</h4>
+    <p class="text-muted mb-0" style="font-size:.85rem;">{{ roles.count }} role{{ roles.count|pluralize }} defined</p>
+  </div>
+  {% if "can_manage_roles" in user_permissions %}
+  <a href="{% url 'rbac:role_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Add Role
+  </a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table mgmt-table mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Name</th>
+          <th>Description</th>
+          <th>Permissions</th>
+          <th>Users</th>
+          <th class="pe-4 text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for role in roles %}
+        <tr>
+          <td class="ps-4">
+            <a href="{% url 'rbac:role_detail' role.pk %}"
+               class="fw-medium text-decoration-none text-dark">
+              {{ role.name }}
+            </a>
+          </td>
+          <td class="text-muted">{{ role.description|default:"—"|truncatechars:60 }}</td>
+          <td>
+            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+              {{ role.permission_count }} permission{{ role.permission_count|pluralize }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+              {{ role.user_count }} user{{ role.user_count|pluralize }}
+            </span>
+          </td>
+          <td class="pe-4 text-end">
+            <a href="{% url 'rbac:role_detail' role.pk %}"
+               class="btn btn-sm btn-outline-secondary border-0" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+            {% if "can_manage_roles" in user_permissions %}
+            <a href="{% url 'rbac:role_edit' role.pk %}"
+               class="btn btn-sm btn-outline-secondary border-0" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{% url 'rbac:role_delete' role.pk %}"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete role {{ role.name }}? Users with this role will have no role assigned.')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="btn btn-sm btn-outline-danger border-0 btn-delete"
+                      title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-5">
+            <i class="bi bi-person-badge d-block fs-2 mb-2 opacity-25"></i>
+            No roles defined yet.
+            {% if "can_manage_roles" in user_permissions %}
+              <a href="{% url 'rbac:role_create' %}">Create the first one.</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,529 @@
+{% extends "posts/base_posts.html" %}
+{% load post_tags %}
+
+{% block title %}New Post{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-slate-300 mx-1">/</span>
+  <a href="{% url 'posts:post_list' %}" class="hover:text-violet-600 transition">All Posts</a>
+  <span class="text-slate-300 mx-1">/</span>
+  <span class="text-slate-700 font-medium">New Post</span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+
+  {# ── Page header ── #}
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'posts:post_list' %}"
+       class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition flex-shrink-0">
+      <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-slate-800">New Post</h1>
+      <p class="text-sm text-slate-500">Write your content once — publish to multiple platforms</p>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate id="post-form">
+    {% csrf_token %}
+
+    <div class="space-y-5">
+
+      {% if form.non_field_errors %}
+      {% include "posts/includes/alert.html" with message=form.non_field_errors.0 type="error" %}
+      {% endif %}
+
+      {# ═══════════════════ CARD 1 — Content ═══════════════════ #}
+      <div class="bg-white rounded-2xl border border-slate-200 p-6">
+        <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i data-lucide="file-text" class="w-4 h-4 text-violet-400"></i>
+          Post Content
+        </h2>
+
+        <div class="mb-4">
+          <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Title <span class="text-slate-400 font-normal">(optional)</span>
+          </label>
+          {{ form.title }}
+          {% if form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ form.title.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="{{ form.content_plain.id_for_label }}" class="text-sm font-medium text-slate-700">
+              Content <span class="text-red-500">*</span>
+            </label>
+            <span id="char-count" class="text-xs text-slate-400">0 / 3000</span>
+          </div>
+          {{ form.content_plain }}
+          {% if form.content_plain.errors %}<p class="mt-1 text-xs text-red-600">{{ form.content_plain.errors.0 }}</p>{% endif %}
+          <p class="mt-1.5 text-xs text-slate-400">This content will be published to all selected platforms.</p>
+        </div>
+
+        <div>
+          <label for="{{ form.hashtags.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Hashtags <span class="text-slate-400 font-normal">(optional)</span>
+          </label>
+          {{ form.hashtags }}
+          {% if form.hashtags.errors %}<p class="mt-1 text-xs text-red-600">{{ form.hashtags.errors.0 }}</p>{% endif %}
+          <p class="mt-1.5 text-xs text-slate-400">e.g. #AI #Python #Django — added after the content when publishing</p>
+        </div>
+      </div>
+
+      {# ═══════════════════ CARD 2 — Featured Image ═══════════════════ #}
+      <div class="bg-white rounded-2xl border border-slate-200 p-6">
+        <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i data-lucide="image" class="w-4 h-4 text-violet-400"></i>
+          Featured Image / Thumbnail <span class="font-normal normal-case tracking-normal text-slate-400">(optional)</span>
+        </h2>
+
+        <div id="featured-drop-zone"
+             class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-violet-300 hover:bg-violet-50/20 transition-all"
+             onclick="document.getElementById('featured-file-input').click()">
+          <div id="featured-dz-idle">
+            <i data-lucide="image" class="w-10 h-10 text-slate-300 mx-auto mb-3"></i>
+            <p class="text-sm font-medium text-slate-600 mb-1">Click or drag a featured image here</p>
+            <p class="text-xs text-slate-400">PNG, JPG, WEBP — max 10 MB</p>
+          </div>
+          <div id="featured-dz-preview" class="hidden">
+            <img id="featured-preview-img" src="#" alt="Preview" class="max-h-48 mx-auto rounded-xl shadow-sm mb-2">
+            <p id="featured-preview-name" class="text-xs text-slate-500"></p>
+            <button type="button" onclick="clearFeaturedImage(event)"
+                    class="mt-2 text-xs text-red-500 hover:text-red-700 transition">Remove image</button>
+          </div>
+        </div>
+        <input type="file" name="featured_image" id="featured-file-input" accept="image/*" class="hidden">
+      </div>
+
+      {# ═══════════════════ CARD 3 — Additional Files ═══════════════════ #}
+      <div class="bg-white rounded-2xl border border-slate-200 p-6">
+        <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i data-lucide="paperclip" class="w-4 h-4 text-violet-400"></i>
+          Additional Files <span class="font-normal normal-case tracking-normal text-slate-400">(optional)</span>
+        </h2>
+
+        <div id="files-drop-zone"
+             class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-violet-300 hover:bg-violet-50/20 transition-all"
+             onclick="document.getElementById('files-input').click()">
+          <div id="files-dz-idle">
+            <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-300 mx-auto mb-3"></i>
+            <p class="text-sm font-medium text-slate-600 mb-1">Click or drag files here</p>
+            <p class="text-xs text-slate-400">Images, Videos, PDFs, Documents — max 10 MB per file</p>
+            <p class="text-xs text-violet-500 mt-2 font-medium">You can select multiple files at once</p>
+          </div>
+        </div>
+        
+        {# Preview container for multiple files #}
+        <div id="files-preview" class="hidden mt-4">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-sm font-medium text-slate-700">Selected Files (<span id="file-count">0</span>)</p>
+            <button type="button" onclick="clearAllFiles()" 
+                    class="text-xs text-red-500 hover:text-red-700 transition font-medium">
+              Remove All
+            </button>
+          </div>
+          <div id="preview-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+        
+        <input type="file" 
+               name="files" 
+               id="files-input" 
+               accept="image/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx" 
+               multiple 
+               class="hidden">
+      </div>
+
+      {# ═══════════════════ CARD 3 — Platform Selection ═══════════════════ #}
+      <div class="bg-white rounded-2xl border border-slate-200 p-6" id="platforms-card">
+        <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+          <i data-lucide="share-2" class="w-4 h-4 text-violet-400"></i>
+          Platforms & Publishing
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">Select accounts to publish to and choose when</p>
+
+        {% if social_accounts %}
+
+        {# Each account row is independently selectable with its own publish mode #}
+        <div class="space-y-3" id="account-list">
+          {% for account in social_accounts %}
+          <div class="rounded-xl border border-slate-200 overflow-hidden account-row" data-account-id="{{ account.pk }}">
+
+            {# Account header with checkbox #}
+            <label class="flex items-center gap-3 p-3.5 cursor-pointer hover:bg-slate-50 transition select-none">
+              <input type="checkbox"
+                     name="selected_accounts"
+                     value="{{ account.pk }}"
+                     class="account-checkbox w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                     onchange="toggleAccountOptions(this)">
+              <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                {% platform_color account.platform.code %}">
+                <i data-lucide="{% platform_icon account.platform.code %}" class="w-4 h-4 text-white"></i>
+              </span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-800 truncate">{{ account.account_label }}</p>
+                <p class="text-xs text-slate-400">{{ account.platform.name }}</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 flex-shrink-0 toggle-icon transition-transform"></i>
+            </label>
+
+            {# Expandable options — hidden until checkbox is ticked #}
+            <div class="account-options hidden border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+              <p class="text-xs font-semibold text-slate-600 mb-2">When to publish</p>
+              <div class="flex flex-col sm:flex-row gap-3">
+
+                {# Publish Now option #}
+                <label class="flex items-start gap-2.5 flex-1 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-violet-300 transition publish-option">
+                  <input type="radio"
+                         name="publish_mode_{{ account.pk }}"
+                         value="now"
+                         checked
+                         class="mt-0.5 text-violet-600 focus:ring-violet-400"
+                         onchange="toggleScheduleFields({{ account.pk }}, 'now')">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-700">Publish Now</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Send immediately when you click Publish</p>
+                  </div>
+                </label>
+
+                {# Schedule option #}
+                <label class="flex items-start gap-2.5 flex-1 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-violet-300 transition publish-option">
+                  <input type="radio"
+                         name="publish_mode_{{ account.pk }}"
+                         value="schedule"
+                         class="mt-0.5 text-violet-600 focus:ring-violet-400"
+                         onchange="toggleScheduleFields({{ account.pk }}, 'schedule')">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-700">Schedule</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Pick a date and time</p>
+                  </div>
+                </label>
+
+              </div>
+
+              {# Date/time fields — shown only when Schedule is picked #}
+              <div class="schedule-fields hidden mt-3 grid grid-cols-2 gap-3" id="schedule-fields-{{ account.pk }}">
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Date</label>
+                  <input type="date"
+                         name="scheduled_date_{{ account.pk }}"
+                         class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Time (UTC)</label>
+                  <input type="time"
+                         name="scheduled_time_{{ account.pk }}"
+                         class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition">
+                </div>
+              </div>
+
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        {# No accounts — prompt to connect #}
+        <div class="flex flex-col items-center py-8 text-center border border-dashed border-slate-200 rounded-xl">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <i data-lucide="link-2-off" class="w-6 h-6 text-slate-300"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-700 mb-1">No social accounts connected</p>
+          <p class="text-xs text-slate-400 mb-4 max-w-xs">Connect a social account first to publish from here.</p>
+          <a href="{% url 'posts:social_account_list' %}"
+             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition">
+            <i data-lucide="link" class="w-3.5 h-3.5"></i>
+            Connect Account
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+
+      {# ═══════════════════ CARD 4 — Actions ═══════════════════ #}
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-slate-700">Ready?</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Save as draft to edit later, or publish/schedule directly if accounts are selected above.
+            </p>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0 flex-wrap">
+            <a href="{% url 'posts:post_list' %}"
+               class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">
+              Cancel
+            </a>
+            <button type="submit" name="action" value="draft"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-900 text-white text-sm font-medium transition">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              Save Draft
+            </button>
+            <button type="submit" name="action" value="publish"
+                    id="publish-btn"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition shadow-sm">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              Publish / Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Character counter ─────────────────────────────────────────────
+const textarea  = document.getElementById('{{ form.content_plain.id_for_label }}');
+const charCount = document.getElementById('char-count');
+if (textarea && charCount) {
+  const updateCount = () => {
+    const n = textarea.value.length;
+    charCount.textContent = n + ' / 3000';
+    charCount.className = 'text-xs ' + (n > 2800 ? 'text-red-500 font-medium' : n > 2500 ? 'text-amber-500' : 'text-slate-400');
+  };
+  textarea.addEventListener('input', updateCount);
+  updateCount();
+}
+
+// ── Featured image upload with preview ─────────────────────────────
+const featuredFileInput  = document.getElementById('featured-file-input');
+const featuredDropZone   = document.getElementById('featured-drop-zone');
+const featuredDzIdle     = document.getElementById('featured-dz-idle');
+const featuredDzPreview  = document.getElementById('featured-dz-preview');
+const featuredPreviewImg = document.getElementById('featured-preview-img');
+const featuredPreviewName = document.getElementById('featured-preview-name');
+
+function showFeaturedPreview(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    alert('Please select an image file for the featured image.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    featuredPreviewImg.src = e.target.result;
+    featuredPreviewName.textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+    featuredDzIdle.classList.add('hidden');
+    featuredDzPreview.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFeaturedImage(e) {
+  e.stopPropagation();
+  featuredFileInput.value = '';
+  featuredDzIdle.classList.remove('hidden');
+  featuredDzPreview.classList.add('hidden');
+}
+
+featuredFileInput.addEventListener('change', e => showFeaturedPreview(e.target.files[0]));
+featuredDropZone.addEventListener('dragover', e => { 
+  e.preventDefault(); 
+  featuredDropZone.classList.add('border-violet-400', 'bg-violet-50'); 
+});
+featuredDropZone.addEventListener('dragleave', () => {
+  featuredDropZone.classList.remove('border-violet-400', 'bg-violet-50');
+});
+featuredDropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  featuredDropZone.classList.remove('border-violet-400', 'bg-violet-50');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    featuredFileInput.files = dt.files;
+    showFeaturedPreview(file);
+  }
+});
+
+// ── Multiple file upload with preview ──────────────────────────────
+const fileInput     = document.getElementById('files-input');
+const dropZone      = document.getElementById('files-drop-zone');
+const dzIdle        = document.getElementById('files-dz-idle');
+const filesPreview  = document.getElementById('files-preview');
+const previewList   = document.getElementById('preview-list');
+const fileCountSpan = document.getElementById('file-count');
+
+let selectedFiles = [];
+
+function getFileIcon(file) {
+  const type = file.type;
+  const name = file.name.toLowerCase();
+  
+  if (type.startsWith('image/')) return 'image';
+  if (type.startsWith('video/')) return 'video';
+  if (type.includes('pdf') || name.endsWith('.pdf')) return 'file-text';
+  if (name.endsWith('.doc') || name.endsWith('.docx')) return 'file-text';
+  if (name.endsWith('.xls') || name.endsWith('.xlsx')) return 'file-spreadsheet';
+  if (name.endsWith('.csv')) return 'table';
+  return 'file';
+}
+
+function getFileColor(file) {
+  const type = file.type;
+  const name = file.name.toLowerCase();
+  
+  if (type.startsWith('image/')) return 'bg-blue-100 text-blue-600';
+  if (type.startsWith('video/')) return 'bg-purple-100 text-purple-600';
+  if (type.includes('pdf') || name.endsWith('.pdf')) return 'bg-red-100 text-red-600';
+  if (name.endsWith('.doc') || name.endsWith('.docx')) return 'bg-blue-100 text-blue-600';
+  if (name.endsWith('.xls') || name.endsWith('.xlsx')) return 'bg-green-100 text-green-600';
+  return 'bg-slate-100 text-slate-600';
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function updateFilePreview() {
+  previewList.innerHTML = '';
+  fileCountSpan.textContent = selectedFiles.length;
+  
+  if (selectedFiles.length === 0) {
+    filesPreview.classList.add('hidden');
+    dzIdle.classList.remove('hidden');
+    return;
+  }
+  
+  filesPreview.classList.remove('hidden');
+  dzIdle.classList.add('hidden');
+  
+  selectedFiles.forEach((file, index) => {
+    const isImage = file.type.startsWith('image/');
+    const icon = getFileIcon(file);
+    const color = getFileColor(file);
+    
+    const previewItem = document.createElement('div');
+    previewItem.className = 'flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200';
+    
+    if (isImage) {
+      // Show image thumbnail
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewItem.innerHTML = `
+          <img src="${e.target.result}" alt="${file.name}" 
+               class="w-12 h-12 rounded object-cover flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-slate-700 truncate">${file.name}</p>
+            <p class="text-xs text-slate-400">${formatFileSize(file.size)}</p>
+          </div>
+          <button type="button" onclick="removeFile(${index})" 
+                  class="flex-shrink-0 w-6 h-6 rounded hover:bg-red-100 flex items-center justify-center transition">
+            <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+          </button>
+        `;
+        lucide.createIcons();
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Show file icon for non-images
+      previewItem.innerHTML = `
+        <div class="w-12 h-12 rounded ${color} flex items-center justify-center flex-shrink-0">
+          <i data-lucide="${icon}" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-slate-700 truncate">${file.name}</p>
+          <p class="text-xs text-slate-400">${formatFileSize(file.size)}</p>
+        </div>
+        <button type="button" onclick="removeFile(${index})" 
+                class="flex-shrink-0 w-6 h-6 rounded hover:bg-red-100 flex items-center justify-center transition">
+          <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+        </button>
+      `;
+      lucide.createIcons();
+    }
+    
+    previewList.appendChild(previewItem);
+  });
+}
+
+function addFiles(newFiles) {
+  const maxSize = 10 * 1024 * 1024; // 10 MB
+  
+  Array.from(newFiles).forEach(file => {
+    if (file.size > maxSize) {
+      alert(`File "${file.name}" is too large. Maximum size is 10 MB.`);
+      return;
+    }
+    selectedFiles.push(file);
+  });
+  
+  // Update the file input with all selected files
+  const dt = new DataTransfer();
+  selectedFiles.forEach(file => dt.items.add(file));
+  fileInput.files = dt.files;
+  
+  updateFilePreview();
+}
+
+function removeFile(index) {
+  selectedFiles.splice(index, 1);
+  
+  const dt = new DataTransfer();
+  selectedFiles.forEach(file => dt.items.add(file));
+  fileInput.files = dt.files;
+  
+  updateFilePreview();
+}
+
+function clearAllFiles() {
+  selectedFiles = [];
+  fileInput.value = '';
+  updateFilePreview();
+}
+
+fileInput.addEventListener('change', (e) => {
+  selectedFiles = []; // Clear previous selection
+  addFiles(e.target.files);
+});
+
+dropZone.addEventListener('dragover', (e) => { 
+  e.preventDefault(); 
+  dropZone.classList.add('border-violet-400', 'bg-violet-50');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('border-violet-400', 'bg-violet-50');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('border-violet-400', 'bg-violet-50');
+  
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    selectedFiles = []; // Clear previous selection
+    addFiles(files);
+  }
+});
+
+// ── Account row toggle ────────────────────────────────────────────
+function toggleAccountOptions(checkbox) {
+  const row     = checkbox.closest('.account-row');
+  const options = row.querySelector('.account-options');
+  const icon    = row.querySelector('.toggle-icon');
+  if (checkbox.checked) {
+    options.classList.remove('hidden');
+    icon.style.transform = 'rotate(180deg)';
+  } else {
+    options.classList.add('hidden');
+    icon.style.transform = '';
+  }
+}
+
+// ── Schedule fields toggle per account ───────────────────────────
+function toggleScheduleFields(accountId, mode) {
+  const fields = document.getElementById('schedule-fields-' + accountId);
+  if (mode === 'schedule') {
+    fields.classList.remove('hidden');
+  } else {
+    fields.classList.add('hidden');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,909 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" />
+<!-- Tailwind CDN — scoped to the calendar component only -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    corePlugins: { preflight: false },   /* don't reset Bootstrap's base styles */
+    important: '#calendarWidget',        /* scope all Tailwind utilities */
+  }
+</script>
+<style>
+  /* ── Glassmorphism card ──────────────────────────────────────── */
+  #calendarWidget {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 20px;
+    box-shadow:
+      0 8px 32px rgba(31,38,135,0.10),
+      0 1.5px 0 rgba(255,255,255,0.6) inset;
+    overflow: hidden;
+  }
+
+  /* ── Gradient hero strip at the top of the card ─────────────── */
+  #calWidgetHeader {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #06b6d4 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  #calWidgetHeader::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* ── Platform tab pills ──────────────────────────────────────── */
+  .cal-tab-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1.5px solid rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.88);
+    cursor: pointer;
+    transition: all .18s ease;
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+  .cal-tab-pill:hover {
+    background: rgba(255,255,255,0.28);
+    border-color: rgba(255,255,255,0.55);
+    color: #fff;
+  }
+  .cal-tab-pill.active {
+    background: rgba(255,255,255,0.95);
+    border-color: transparent;
+    color: #4f46e5;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    font-weight: 600;
+  }
+  .cal-tab-pill.active .plt-li  { color: #0a66c2; }
+  .cal-tab-pill.active .plt-fb  { color: #1877f2; }
+  .cal-tab-pill.active .plt-ig  { color: #e1306c; }
+  .cal-tab-pill.active .plt-dc  { color: #5865f2; }
+
+  /* ── Date input modern ───────────────────────────────────────── */
+  .cal-date-input {
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    background: #fff;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    cursor: pointer;
+  }
+  .cal-date-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  }
+  .cal-date-input.invalid {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.10);
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────── */
+  .cal-btn-apply {
+    height: 36px;
+    padding: 0 18px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s, box-shadow .15s;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.30);
+    white-space: nowrap;
+  }
+  .cal-btn-apply:hover  { opacity: .92; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99,102,241,0.35); }
+  .cal-btn-apply:active { transform: translateY(0); }
+  .cal-btn-apply:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .cal-btn-clear {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+    white-space: nowrap;
+  }
+  .cal-btn-clear:hover { background: #f9fafb; border-color: #d1d5db; color: #374151; }
+
+  .cal-btn-manage {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(255,255,255,0.40);
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.92);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background .15s, border-color .15s;
+    backdrop-filter: blur(6px);
+  }
+  .cal-btn-manage:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.65); color: #fff; }
+
+  /* ── Calendar panels ─────────────────────────────────────────── */
+  .calendar-panel { display: none; }
+  .calendar-panel.active { display: block; }
+
+  /* ── FullCalendar skin ───────────────────────────────────────── */
+  .fc .fc-toolbar-title  { font-size: 15px; font-weight: 700; color: #1e1b4b; letter-spacing: -.01em; }
+  .fc .fc-button {
+    font-size: 12px; font-weight: 600; padding: 5px 12px;
+    border-radius: 8px !important;
+    border: 1.5px solid #e5e7eb !important;
+    background: #fff !important;
+    color: #374151 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+    transition: background .12s, border-color .12s !important;
+  }
+  .fc .fc-button:hover {
+    background: #f9fafb !important;
+    border-color: #d1d5db !important;
+  }
+  .fc .fc-button-active,
+  .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.28) !important;
+  }
+  .fc .fc-today-button {
+    background: linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+  }
+  .fc .fc-col-header-cell-cushion {
+    font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .fc .fc-daygrid-day-number { font-size: 12.5px; font-weight: 500; color: #374151; }
+  .fc .fc-day-today { background: rgba(99,102,241,0.05) !important; }
+  .fc .fc-day-today .fc-daygrid-day-number { color: #6366f1; font-weight: 700; }
+  .fc .fc-daygrid-event {
+    font-size: 11.5px; border-radius: 6px !important;
+    padding: 0 !important; border: none !important;
+    background: transparent !important;
+    margin-bottom: 3px;
+    box-shadow: none !important;
+  }
+  .fc .fc-list-event:hover td { background: rgba(99,102,241,0.04); }
+  .fc .fc-list-day-cushion { background: rgba(99,102,241,0.06); }
+  .fc thead th { border-color: #f3f4f6 !important; }
+  .fc td, .fc th { border-color: #f3f4f6 !important; }
+
+  /* ── Legend chips ────────────────────────────────────────────── */
+  .cal-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px 3px 7px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #374151;
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+  }
+  .cal-legend-chip .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────── */
+  .cal-empty-state {
+    padding: 4rem 1.5rem;
+    text-align: center;
+  }
+  .cal-empty-icon {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.12));
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 1.25rem;
+    font-size: 2rem; color: #8b5cf6;
+  }
+  .cal-connect-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 22px; border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; font-size: 13.5px; font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.30);
+    transition: opacity .15s, transform .1s;
+  }
+  .cal-connect-btn:hover { opacity: .9; transform: translateY(-1px); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════════════════════════════════════════
+     Top: Welcome + overview
+═══════════════════════════════════════════════════════════════ -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="mb-0 fw-semibold">Overview</h4>
+    <p class="text-muted mb-0" style="font-size:.85rem;">
+      Welcome back, <strong>{{ request.user.username }}</strong>.
+    </p>
+  </div>
+</div>
+
+<!-- ── Stat cards ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    {% if "can_view_users" in user_permissions %}<a href="{% url 'rbac:user_list' %}" class="text-decoration-none">{% endif %}
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-people"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Users</div>
+            <div class="fw-bold fs-5 text-dark">{{ rbac_user_count }}</div>
+          </div>
+        </div>
+      </div>
+    {% if "can_view_users" in user_permissions %}</a>{% endif %}
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    {% if "can_view_roles" in user_permissions %}<a href="{% url 'rbac:role_list' %}" class="text-decoration-none">{% endif %}
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-person-badge"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Roles</div>
+            <div class="fw-bold fs-5 text-dark">{{ rbac_role_count }}</div>
+          </div>
+        </div>
+      </div>
+    {% if "can_view_roles" in user_permissions %}</a>{% endif %}
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    {% if "can_view_permissions" in user_permissions %}<a href="{% url 'rbac:permission_list' %}" class="text-decoration-none">{% endif %}
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-shield-check"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Permissions</div>
+            <div class="fw-bold fs-5 text-dark">{{ rbac_permission_count }}</div>
+          </div>
+        </div>
+      </div>
+    {% if "can_view_permissions" in user_permissions %}</a>{% endif %}
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-activity"></i></div>
+        <div>
+          <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Active Sessions</div>
+          <div class="fw-bold fs-5 text-dark">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /stat cards -->
+
+<!-- ── Post stats (only when user has post permissions) ───────── -->
+{% if "can_view_posts" in user_permissions %}
+<div class="row g-3 mb-4">
+
+  <div class="col-12">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="fw-semibold" style="font-size:.9rem;">
+        <i class="bi bi-send me-1 text-primary"></i> Social Publishing
+      </span>
+      <a href="{% url 'posts:post_list' %}" class="btn btn-sm btn-outline-primary" style="font-size:.8rem;">
+        View All Posts
+      </a>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <a href="{% url 'posts:post_list' %}" class="text-decoration-none">
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon text-white" style="background-color:#7c3aed20;">
+            <i class="bi bi-file-earmark-text" style="color:#7c3aed;"></i>
+          </div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Total Posts</div>
+            <div class="fw-bold fs-5 text-dark">{{ posts_total_count|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <a href="{% url 'posts:post_list' %}?status=draft" class="text-decoration-none">
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-pencil-square"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Drafts</div>
+            <div class="fw-bold fs-5 text-dark">{{ posts_draft_count|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <a href="{% url 'posts:post_list' %}?status=scheduled" class="text-decoration-none">
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-clock"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Scheduled</div>
+            <div class="fw-bold fs-5 text-dark">{{ posts_scheduled_count|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <a href="{% url 'posts:post_list' %}?status=published" class="text-decoration-none">
+      <div class="card stat-card shadow-sm h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check2-circle"></i></div>
+          <div>
+            <div class="text-muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">Published</div>
+            <div class="fw-bold fs-5 text-dark">{{ posts_published_count|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>
+{% endif %}<!-- /post stats -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     Publishing Calendar — Glassmorphism component
+     Only visible when the user has can_view_posts permission.
+═══════════════════════════════════════════════════════════════ -->
+{% if "can_view_posts" in user_permissions %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div id="calendarWidget">
+
+      <!-- ── Gradient header ────────────────────────────────────── -->
+      <div id="calWidgetHeader" style="padding: 22px 24px 20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; position:relative; z-index:1;">
+
+          <!-- Title + subtitle -->
+          <div>
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:3px;">
+              <div style="width:32px;height:32px;background:rgba(255,255,255,0.18);border-radius:9px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.25);">
+                <i class="bi bi-calendar3" style="color:#fff;font-size:15px;"></i>
+              </div>
+              <span style="font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em;">Publishing Calendar</span>
+            </div>
+            <p style="margin:0;font-size:12.5px;color:rgba(255,255,255,0.72);">
+              View scheduled &amp; published posts per connected account
+            </p>
+          </div>
+
+          <!-- Manage accounts button -->
+          {% if social_accounts %}
+          <a href="{% url 'posts:social_account_list' %}" class="cal-btn-manage">
+            <i class="bi bi-gear"></i> Manage Accounts
+          </a>
+          {% endif %}
+        </div>
+
+        {% if social_accounts %}
+        <!-- ── Account tab pills ─────────────────────────────── -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;position:relative;z-index:1;" id="calTabs">
+          {% for account in social_accounts %}
+          <button
+            class="cal-tab-pill{% if forloop.first %} active{% endif %}"
+            data-account-id="{{ account.pk }}"
+            data-platform="{{ account.platform.code }}"
+            type="button">
+            {% with code=account.platform.code %}
+            {% if code == "linkedin" or code == "linkedin_page" %}
+              <i class="bi bi-linkedin plt-li" style="font-size:13px;"></i>
+            {% elif code == "facebook" %}
+              <i class="bi bi-facebook plt-fb" style="font-size:13px;"></i>
+            {% elif code == "instagram" %}
+              <i class="bi bi-instagram plt-ig" style="font-size:13px;"></i>
+            {% elif code == "x" or code == "twitter" %}
+              <i class="bi bi-twitter-x" style="font-size:13px;"></i>
+            {% elif code == "discord" %}
+              <i class="bi bi-discord plt-dc" style="font-size:13px;"></i>
+            {% else %}
+              <i class="bi bi-globe" style="font-size:13px;"></i>
+            {% endif %}
+            {% endwith %}
+            {{ account.account_label }}
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div><!-- /header -->
+
+      {% if social_accounts %}
+
+        <!-- ── Date-range filter bar ───────────────────────────── -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 24px;background:#fff;border-bottom:1px solid #f3f4f6;">
+          <!-- Label -->
+          <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:5px;">
+            <i class="bi bi-funnel" style="font-size:11px;"></i> Filter
+          </span>
+
+          <!-- From -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label for="calStart" style="font-size:12.5px;font-weight:500;color:#9ca3af;margin:0;white-space:nowrap;">From</label>
+            <input type="date" id="calStart" class="cal-date-input" value="{{ cal_start }}" />
+          </div>
+
+          <!-- To -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label for="calEnd" style="font-size:12.5px;font-weight:500;color:#9ca3af;margin:0;white-space:nowrap;">To</label>
+            <input type="date" id="calEnd" class="cal-date-input" value="{{ cal_end }}" />
+          </div>
+
+          <!-- Status dropdown -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label for="calStatus" style="font-size:12.5px;font-weight:500;color:#9ca3af;margin:0;white-space:nowrap;">Status</label>
+            <div style="position:relative;">
+              <select id="calStatus" class="cal-date-input" style="padding-right:28px;appearance:none;-webkit-appearance:none;cursor:pointer;min-width:130px;">
+                <option value="">All statuses</option>
+                <option value="pending"   {% if cal_status == "pending"   %}selected{% endif %}>🟣 Pending</option>
+                <option value="scheduled" {% if cal_status == "scheduled" %}selected{% endif %}>🔵 Scheduled</option>
+                <option value="publishing"{% if cal_status == "publishing"%}selected{% endif %}>🟡 Publishing</option>
+                <option value="retrying"  {% if cal_status == "retrying"  %}selected{% endif %}>🟡 Retrying</option>
+                <option value="success"   {% if cal_status == "success"   %}selected{% endif %}>🟢 Published</option>
+                <option value="failed"    {% if cal_status == "failed"    %}selected{% endif %}>🔴 Failed</option>
+                <option value="cancelled" {% if cal_status == "cancelled" %}selected{% endif %}>⚫ Cancelled</option>
+              </select>
+              <!-- Custom caret -->
+              <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#9ca3af;font-size:10px;">▾</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <button class="cal-btn-apply" id="calApplyFilter">
+            <i class="bi bi-check2 me-1"></i> Apply
+          </button>
+          <button class="cal-btn-clear" id="calClearFilter">
+            <i class="bi bi-x me-1"></i> Clear
+          </button>
+
+          <!-- Validation error -->
+          <span id="calDateError" style="display:none;font-size:12px;font-weight:500;color:#ef4444;display:none;align-items:center;gap:4px;">
+            <i class="bi bi-exclamation-circle"></i> End date can't be before start date
+          </span>
+        </div>
+
+        <!-- ── Calendar panels ─────────────────────────────────── -->
+        <div style="padding:24px;">
+          {% for account in social_accounts %}
+          <div
+            class="calendar-panel{% if forloop.first %} active{% endif %}"
+            id="calPanel-{{ account.pk }}"
+            data-account-id="{{ account.pk }}">
+            <div id="cal-{{ account.pk }}" style="min-height:520px;"></div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- ── Legend ──────────────────────────────────────────── -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 24px 20px;">
+          <span style="font-size:11.5px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-right:4px;">Status</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#a78bfa;"></span>Pending</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#0ea5e9;"></span>Scheduled</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#f59e0b;"></span>Publishing</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#22c55e;"></span>Published</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#ef4444;"></span>Failed</span>
+          <span class="cal-legend-chip"><span class="dot" style="background:#94a3b8;"></span>Cancelled</span>
+        </div>
+
+      {% else %}
+        <!-- ── Empty state ────────────────────────────────────── -->
+        <div class="cal-empty-state">
+          <div class="cal-empty-icon">
+            <i class="bi bi-plug-fill"></i>
+          </div>
+          <h6 style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:6px;">No connected accounts</h6>
+          <p style="font-size:13.5px;color:#6b7280;max-width:320px;margin:0 auto 1.5rem;">
+            Connect a social media account to see your publishing calendar here.
+          </p>
+          <a href="{% url 'posts:social_account_list' %}" class="cal-connect-btn">
+            <i class="bi bi-plug"></i> Connect Account
+          </a>
+        </div>
+      {% endif %}
+
+    </div><!-- /#calendarWidget -->
+  </div>
+</div>
+{% endif %}<!-- /can_view_posts -->
+
+<!-- ── Bottom row: Recent Activity + Quick Links ──────────────── -->
+<div class="row g-3">
+
+  <div class="col-12 col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
+        <span class="fw-semibold" style="font-size:.9rem;">Recent Activity</span>
+        <span class="badge bg-secondary bg-opacity-10 text-secondary">Coming soon</span>
+      </div>
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-clock-history fs-2 d-block mb-2 opacity-25"></i>
+        No activity to show yet.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white border-bottom">
+        <span class="fw-semibold" style="font-size:.9rem;">Quick Links</span>
+      </div>
+      <ul class="list-group list-group-flush">
+
+        {% if "can_create_users" in user_permissions %}
+        <li class="list-group-item py-3" style="font-size:.875rem;">
+          <a href="{% url 'rbac:user_create' %}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+            <i class="bi bi-person-plus text-primary"></i>Add New User
+          </a>
+        </li>
+        {% endif %}
+
+        {% if "can_manage_roles" in user_permissions %}
+        <li class="list-group-item py-3" style="font-size:.875rem;">
+          <a href="{% url 'rbac:role_create' %}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+            <i class="bi bi-plus-circle text-success"></i>Create New Role
+          </a>
+        </li>
+        {% endif %}
+
+        {% if "can_manage_permissions" in user_permissions %}
+        <li class="list-group-item py-3" style="font-size:.875rem;">
+          <a href="{% url 'rbac:permission_create' %}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+            <i class="bi bi-shield-plus text-warning"></i>Add Permission
+          </a>
+        </li>
+        {% endif %}
+
+        {% if "can_view_users" in user_permissions %}
+        <li class="list-group-item py-3" style="font-size:.875rem;">
+          <a href="{% url 'rbac:user_list' %}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+            <i class="bi bi-people text-info"></i>Manage Users
+          </a>
+        </li>
+        {% endif %}
+
+        {% if "can_create_posts" in user_permissions %}
+        <li class="list-group-item py-3" style="font-size:.875rem;">
+          <a href="{% url 'posts:post_create' %}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+            <i class="bi bi-pencil-square text-primary"></i>Create New Post
+          </a>
+        </li>
+        {% endif %}
+
+        {% if not user_permissions %}
+        <li class="list-group-item py-3 text-muted text-center" style="font-size:.85rem;">
+          <i class="bi bi-info-circle me-1"></i>No actions available for your role.
+        </li>
+        {% endif %}
+
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+{% if "can_view_posts" in user_permissions and social_accounts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ── Bootstrap data from Django ─────────────────────────────── */
+  const BOOTSTRAP_EVENTS = {{ calendar_events|safe }};
+  const EVENTS_URL       = "{% url 'core:dashboard_calendar_events' %}";
+
+  /* Date-range state (from URL or cleared) */
+  let filterStart  = "{{ cal_start|escapejs }}"  || null;
+  let filterEnd    = "{{ cal_end|escapejs }}"    || null;
+  let filterStatus = "{{ cal_status|escapejs }}" || null;
+
+  /* Track initialised FullCalendar instances: { accountId: Calendar } */
+  const calInstances = {};
+
+  /* ── Platform colour for toolbar accent ─────────────────────── */
+  const PLT_COLOURS = {
+    linkedin:      "#0a66c2",
+    linkedin_page: "#0a66c2",
+    facebook:      "#1877f2",
+    instagram:     "#e1306c",
+    x:             "#000000",
+    twitter:       "#1da1f2",
+    discord:       "#5865f2",
+  };
+
+  /* ── Build FullCalendar for one account ─────────────────────── */
+  function initCalendar(accountId, platform) {
+    if (calInstances[accountId]) return; // already done
+
+    const el = document.getElementById("cal-" + accountId);
+    if (!el) return;
+
+    const accentColor = PLT_COLOURS[platform] || "#0d6efd";
+
+    const bootstrapEvents = (BOOTSTRAP_EVENTS[String(accountId)] || []);
+
+    const cal = new FullCalendar.Calendar(el, {
+      initialView:   "dayGridMonth",
+      height:        "auto",
+      headerToolbar: {
+        left:   "prev,next today",
+        center: "title",
+        right:  "dayGridMonth,listMonth",
+      },
+      buttonText: { listMonth: "List" },
+      themeSystem: "bootstrap5",
+
+      /* ── Event source: AJAX (re-fetches on nav) ── */
+      events: function (info, successCb, failureCb) {
+        const params = new URLSearchParams({
+          account: accountId,
+          start:   info.startStr,
+          end:     info.endStr,
+        });
+        if (filterStart)  params.set("cal_start",  filterStart);
+        if (filterEnd)    params.set("cal_end",    filterEnd);
+        if (filterStatus) params.set("cal_status", filterStatus);
+
+        fetch(EVENTS_URL + "?" + params.toString(), {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin",
+        })
+          .then(r => r.ok ? r.json() : Promise.reject(r.status))
+          .then(successCb)
+          .catch(() => {
+            // Graceful fallback: use bootstrapped data if AJAX fails
+            successCb(bootstrapEvents.filter(ev => {
+              if (filterStatus && ev.status !== filterStatus) return false;
+              if (!filterStart && !filterEnd) return true;
+              const d = new Date(ev.start);
+              if (filterStart && d < new Date(filterStart)) return false;
+              if (filterEnd   && d > new Date(filterEnd))   return false;
+              return true;
+            }));
+          });
+      },
+
+      /* ── Click → post detail ── */
+      eventClick: function (info) {
+        info.jsEvent.preventDefault();
+        if (info.event.url) window.location.href = info.event.url;
+      },
+
+      /* ── Custom event render: pill badge ── */
+      eventContent: function (arg) {
+        const color = arg.event.backgroundColor || "#6366f1";
+
+        /* Convert hex to a very light tint for the badge background */
+        function hexToRgb(hex) {
+          const r = parseInt(hex.slice(1,3),16);
+          const g = parseInt(hex.slice(3,5),16);
+          const b = parseInt(hex.slice(5,7),16);
+          return `${r},${g},${b}`;
+        }
+        const rgb = hexToRgb(color);
+
+        const badge = document.createElement("div");
+        badge.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          width: 100%;
+          padding: 3px 7px 3px 5px;
+          border-radius: 6px;
+          background: rgba(${rgb}, 0.10);
+          border-left: 3px solid ${color};
+          cursor: pointer;
+          overflow: hidden;
+          box-sizing: border-box;
+        `;
+
+        /* Dot */
+        const dot = document.createElement("span");
+        dot.style.cssText = `
+          width: 6px; height: 6px; border-radius: 50%;
+          background: ${color}; flex-shrink: 0;
+        `;
+
+        /* Title */
+        const title = document.createElement("span");
+        title.style.cssText = `
+          font-size: 11.5px;
+          font-weight: 600;
+          color: ${color};
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          line-height: 1.4;
+          filter: brightness(0.78);
+        `;
+        title.textContent = arg.event.title;
+
+        badge.appendChild(dot);
+        badge.appendChild(title);
+        return { domNodes: [badge] };
+      },
+
+      /* ── Tooltip on hover ── */
+      eventDidMount: function (info) {
+        const props = info.event.extendedProps || {};
+        const label = [
+          props.account   ? props.account   : "",
+          props.platform  ? `(${props.platform})` : "",
+          props.status    ? `• ${props.status}`   : "",
+        ].filter(Boolean).join(" ");
+        info.el.title = `${info.event.title}\n${label}`;
+      },
+
+      /* Highlight today */
+      nowIndicator: true,
+    });
+
+    cal.render();
+    calInstances[accountId] = cal;
+  }
+
+  /* ── Tab switching ───────────────────────────────────────────── */
+  const tabBtns   = document.querySelectorAll(".cal-tab-pill");
+  const panels    = document.querySelectorAll(".calendar-panel");
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", function () {
+      /* Deactivate all */
+      tabBtns.forEach(b => b.classList.remove("active"));
+      panels.forEach(p => p.classList.remove("active"));
+
+      /* Activate clicked */
+      btn.classList.add("active");
+      const accountId = btn.dataset.accountId;
+      const platform  = btn.dataset.platform;
+      const panel     = document.getElementById("calPanel-" + accountId);
+      if (panel) panel.classList.add("active");
+
+      /* Lazy init — only render when first visible */
+      initCalendar(accountId, platform);
+
+      /* Re-render in case the panel was hidden during first render */
+      if (calInstances[accountId]) {
+        calInstances[accountId].updateSize();
+      }
+    });
+  });
+
+  /* ── Date-range filter ───────────────────────────────────────── */
+  const startInput    = document.getElementById("calStart");
+  const endInput      = document.getElementById("calEnd");
+  const statusSelect  = document.getElementById("calStatus");
+  const applyBtn      = document.getElementById("calApplyFilter");
+  const clearBtn      = document.getElementById("calClearFilter");
+  const dateError     = document.getElementById("calDateError");
+
+  /* ── Date validation ─────────────────────────────────────────── */
+  function validateDateRange() {
+    const s = startInput.value;
+    const e = endInput.value;
+    const invalid = s && e && e < s;
+
+    if (invalid) {
+      endInput.classList.add("invalid");
+      startInput.classList.remove("invalid");
+      if (dateError) { dateError.style.display = "inline-flex"; }
+      if (applyBtn)  applyBtn.disabled = true;
+    } else {
+      endInput.classList.remove("invalid");
+      startInput.classList.remove("invalid");
+      if (dateError) { dateError.style.display = "none"; }
+      if (applyBtn)  applyBtn.disabled = false;
+    }
+    return !invalid;
+  }
+
+  /* Enforce: when start changes, push end's min to match start */
+  startInput.addEventListener("change", function () {
+    endInput.min = startInput.value || "";
+    validateDateRange();
+  });
+
+  endInput.addEventListener("change", validateDateRange);
+
+  /* Set initial min if cal_start was pre-populated from the URL */
+  if (startInput.value) endInput.min = startInput.value;
+
+  function applyFilter() {
+    if (!validateDateRange()) return;
+
+    filterStart  = startInput.value       || null;
+    filterEnd    = endInput.value         || null;
+    filterStatus = statusSelect ? (statusSelect.value || null) : null;
+
+    /* Persist in URL so refresh keeps the filter */
+    const url = new URL(window.location.href);
+    if (filterStart)  url.searchParams.set("cal_start",  filterStart);
+    else              url.searchParams.delete("cal_start");
+    if (filterEnd)    url.searchParams.set("cal_end",    filterEnd);
+    else              url.searchParams.delete("cal_end");
+    if (filterStatus) url.searchParams.set("cal_status", filterStatus);
+    else              url.searchParams.delete("cal_status");
+    window.history.replaceState({}, "", url.toString());
+
+    /* Refetch events for all initialised calendars */
+    Object.values(calInstances).forEach(cal => {
+      cal.refetchEvents();
+      if (filterStart) cal.gotoDate(filterStart);
+    });
+  }
+
+  if (applyBtn) applyBtn.addEventListener("click", applyFilter);
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      startInput.value  = "";
+      endInput.value    = "";
+      endInput.min      = "";
+      if (statusSelect) statusSelect.value = "";
+      filterStart = filterEnd = filterStatus = null;
+      validateDateRange();
+      applyFilter();
+    });
+  }
+
+  /* ── Init first tab immediately ─────────────────────────────── */
+  const firstActiveBtn = document.querySelector(".cal-tab-pill.active");
+  if (firstActiveBtn) {
+    initCalendar(firstActiveBtn.dataset.accountId, firstActiveBtn.dataset.platform);
+  }
+
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}Users{% endblock %}
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="mb-0 fw-semibold">Users</h4>
+    <p class="text-muted mb-0" style="font-size:.85rem;">{{ users.count }} user{{ users.count|pluralize }} registered</p>
+  </div>
+  {% if "can_create_users" in user_permissions %}
+  <a href="{% url 'rbac:user_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i> Add User
+  </a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table mgmt-table mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Username</th>
+          <th>Full Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Staff</th>
+          <th class="pe-4 text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="ps-4">
+            <a href="{% url 'rbac:user_detail' u.pk %}"
+               class="fw-medium text-decoration-none text-dark">
+              {{ u.username }}
+            </a>
+          </td>
+          <td>{{ u.get_full_name|default:"—" }}</td>
+          <td class="text-muted">{{ u.email|default:"—" }}</td>
+          <td>
+            {% if u.profile.role %}
+              <span class="badge bg-primary bg-opacity-10 text-primary badge-role">
+                {{ u.profile.role.name }}
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size:.8rem;">No role</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary bg-opacity-10 text-secondary">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_staff %}
+              <i class="bi bi-check-circle-fill text-primary" title="Staff"></i>
+            {% else %}
+              <i class="bi bi-dash text-muted"></i>
+            {% endif %}
+          </td>
+          <td class="pe-4 text-end">
+            {% if "can_edit_users" in user_permissions %}
+            <a href="{% url 'rbac:user_edit' u.pk %}"
+               class="btn btn-sm btn-outline-secondary border-0"
+               title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+            {% if "can_delete_users" in user_permissions and u != request.user %}
+            <form method="post" action="{% url 'rbac:user_delete' u.pk %}"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="btn btn-sm btn-outline-danger border-0 btn-delete"
+                      title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-5">
+            <i class="bi bi-people d-block fs-2 mb-2 opacity-25"></i>
+            No users found.
+            {% if "can_create_users" in user_permissions %}
+              <a href="{% url 'rbac:user_create' %}">Add the first one.</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

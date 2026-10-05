@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Posts{% endblock %} — Postly</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}" />
+
+  <!-- Tailwind CSS (CDN play — swap for build in production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: "#7c3aed", light: "#ede9fe", dark: "#5b21b6" }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide icons (lightweight, tree-shakeable SVG icons) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- SweetAlert2 for beautiful alerts and confirmations -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full">
+
+<div class="flex h-full min-h-screen">
+
+  <!-- ════════════════ SIDEBAR ════════════════ -->
+  {% include "posts/includes/sidebar.html" %}
+
+  <!-- ════════════════ MAIN AREA ════════════════ -->
+  <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
+
+    <!-- Topbar -->
+    {% include "posts/includes/topbar.html" %}
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="px-6 pt-4 space-y-2" id="flash-messages">
+      {% for msg in messages %}
+      {% include "posts/includes/alert.html" with msg=msg %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-y-auto px-6 py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 bg-white px-6 py-3 text-xs text-slate-400 flex justify-between">
+      <span>&copy; {% now "Y" %} MyApp. All rights reserved.</span>
+      <span>Social Publishing v0.1</span>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  // Init Lucide icons
+  lucide.createIcons();
+
+  // Auto-dismiss flash messages after 4s
+  setTimeout(() => {
+    document.querySelectorAll('.flash-msg').forEach(el => {
+      el.style.transition = 'opacity 0.4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    });
+  }, 4000);
+
+  // Mobile sidebar toggle
+  const sidebarToggle  = document.getElementById('sidebar-toggle');
+  const mobileSidebar  = document.getElementById('mobile-sidebar');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+      mobileSidebar.classList.toggle('hidden');
+      sidebarOverlay.classList.toggle('hidden');
+    });
+    sidebarOverlay.addEventListener('click', () => {
+      mobileSidebar.classList.add('hidden');
+      sidebarOverlay.classList.add('hidden');
+    });
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

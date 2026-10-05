@@ -1,0 +1,74 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}{{ action }} Permission{% endblock %}
+{% block page_title %}{{ action }} Permission{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center mb-4 gap-2">
+  <a href="{% url 'rbac:permission_list' %}" class="btn btn-sm btn-outline-secondary border-0 p-1">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-semibold">{{ action }} Permission</h4>
+    {% if object %}
+      <p class="text-muted mb-0" style="font-size:.85rem;">Editing {{ object.codename }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-7 col-xl-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label fw-medium" style="font-size:.875rem;">
+              Name <span class="text-danger">*</span>
+            </label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.name.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-medium" style="font-size:.875rem;">
+              Codename <span class="text-danger">*</span>
+            </label>
+            {{ form.codename }}
+            <div class="form-text">Lowercase slug used in code checks, e.g. <code>can_view_users</code></div>
+            {% if form.codename.errors %}
+              <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.codename.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-medium" style="font-size:.875rem;">Description</label>
+            {{ form.description }}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> {{ action }} Permission
+            </button>
+            <a href="{% url 'rbac:permission_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,94 @@
+{% load static %}
+<nav class="sidebar" id="appSidebar">
+
+  <!-- Brand -->
+  <a href="{% url 'core:dashboard' %}" class="sidebar-brand">
+    <img src="{% static 'images/logo.png' %}" alt="Postly" style="height: 28px; margin-right: 8px;">
+    Post<span>ly</span>
+  </a>
+
+  <div class="flex-grow-1 overflow-auto py-2">
+
+    <p class="sidebar-section-label">Main</p>
+
+    <ul class="nav flex-column">
+      <li class="nav-item">
+        <a href="{% url 'core:dashboard' %}"
+           class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2 nav-icon"></i>
+          Dashboard
+        </a>
+      </li>
+    </ul>
+
+    {% if "can_view_posts" in user_permissions or "can_create_posts" in user_permissions %}
+    <p class="sidebar-section-label mt-3">Publishing</p>
+    <ul class="nav flex-column">
+
+      {% if "can_view_posts" in user_permissions %}
+      <li class="nav-item">
+        <a href="{% url 'posts:post_list' %}"
+           class="nav-link {% if request.resolver_match.namespace == 'posts' %}active{% endif %}">
+          <i class="bi bi-send nav-icon"></i>
+          Posts
+        </a>
+      </li>
+      {% endif %}
+
+      {% if "can_create_posts" in user_permissions %}
+      <li class="nav-item">
+        <a href="{% url 'posts:post_create' %}"
+           class="nav-link {% if request.resolver_match.url_name == 'post_create' %}active{% endif %}">
+          <i class="bi bi-plus-square nav-icon"></i>
+          New Post
+        </a>
+      </li>
+      {% endif %}
+
+    </ul>
+    {% endif %}
+
+    {% if "can_view_users" in user_permissions or "can_view_roles" in user_permissions or "can_view_permissions" in user_permissions %}
+    <p class="sidebar-section-label mt-3">Management</p>
+    <ul class="nav flex-column">
+
+      {% if "can_view_users" in user_permissions %}
+      <li class="nav-item">
+        <a href="{% url 'rbac:user_list' %}"
+           class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-people nav-icon"></i>
+          Users
+        </a>
+      </li>
+      {% endif %}
+
+      {% if "can_view_roles" in user_permissions %}
+      <li class="nav-item">
+        <a href="{% url 'rbac:role_list' %}"
+           class="nav-link {% if 'role' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-person-badge nav-icon"></i>
+          Roles
+        </a>
+      </li>
+      {% endif %}
+
+      {% if "can_view_permissions" in user_permissions %}
+      <li class="nav-item">
+        <a href="{% url 'rbac:permission_list' %}"
+           class="nav-link {% if 'permission' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-shield-check nav-icon"></i>
+          Permissions
+        </a>
+      </li>
+      {% endif %}
+
+    </ul>
+    {% endif %}
+
+  </div>
+
+  <div class="px-3 py-3" style="border-top:1px solid rgba(255,255,255,.08); font-size:.75rem; color:#5a6a7a;">
+    v0.1.0 &mdash; Local dev
+  </div>
+
+</nav>

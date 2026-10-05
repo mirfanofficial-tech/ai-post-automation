@@ -1,0 +1,92 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}Role — {{ object.name }}{% endblock %}
+{% block page_title %}Role Detail{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center mb-4 gap-2">
+  <a href="{% url 'rbac:role_list' %}" class="btn btn-sm btn-outline-secondary border-0 p-1">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-semibold">{{ object.name }}</h4>
+    <p class="text-muted mb-0" style="font-size:.85rem;">{{ object.description|default:"No description" }}</p>
+  </div>
+  {% if "can_manage_roles" in user_permissions %}
+  <a href="{% url 'rbac:role_edit' object.pk %}" class="btn btn-sm btn-outline-primary ms-auto">
+    <i class="bi bi-pencil me-1"></i> Edit
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white d-flex align-items-center justify-content-between" style="font-size:.875rem;">
+        <span class="fw-semibold">Permissions</span>
+        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+          {{ object.permissions.count }}
+        </span>
+      </div>
+      <div class="card-body">
+        {% if object.permissions.all %}
+          <div class="d-flex flex-wrap gap-2">
+            {% for perm in object.permissions.all %}
+            <span class="badge bg-light text-dark border" style="font-size:.75rem; font-weight:500;">
+              <i class="bi bi-shield-check text-success me-1"></i>{{ perm.codename }}
+            </span>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center text-muted py-3">
+            <i class="bi bi-shield d-block fs-2 mb-1 opacity-25"></i>
+            No permissions assigned.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white d-flex align-items-center justify-content-between" style="font-size:.875rem;">
+        <span class="fw-semibold">Users with this Role</span>
+        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+          {{ object.user_profiles.count }}
+        </span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for profile in object.user_profiles.all %}
+        <li class="list-group-item d-flex align-items-center gap-2 py-2" style="font-size:.875rem;">
+          <div class="rounded-circle bg-primary bg-opacity-10 text-primary
+                      d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+               style="width:28px;height:28px;font-size:.7rem;">
+            {{ profile.user.username|first|upper }}
+          </div>
+          {% if "can_view_users" in user_permissions %}
+          <a href="{% url 'rbac:user_detail' profile.user.pk %}"
+             class="text-decoration-none text-dark">
+            {{ profile.user.username }}
+          </a>
+          {% else %}
+          <span>{{ profile.user.username }}</span>
+          {% endif %}
+          {% if not profile.user.is_active %}
+            <span class="ms-auto badge bg-secondary bg-opacity-10 text-secondary">Inactive</span>
+          {% endif %}
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted py-4">
+          <i class="bi bi-people d-block fs-2 mb-1 opacity-25"></i>
+          No users assigned to this role.
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

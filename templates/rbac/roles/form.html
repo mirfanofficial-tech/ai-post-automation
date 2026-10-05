@@ -1,0 +1,86 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}{{ action }} Role{% endblock %}
+{% block page_title %}{{ action }} Role{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center mb-4 gap-2">
+  <a href="{% url 'rbac:role_list' %}" class="btn btn-sm btn-outline-secondary border-0 p-1">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-semibold">{{ action }} Role</h4>
+    {% if object %}
+      <p class="text-muted mb-0" style="font-size:.85rem;">Editing {{ object.name }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8 col-xl-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label fw-medium" style="font-size:.875rem;">
+              Role Name <span class="text-danger">*</span>
+            </label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.name.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-medium" style="font-size:.875rem;">Description</label>
+            {{ form.description }}
+          </div>
+
+          <p class="fw-semibold text-muted mb-2" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;">
+            Assign Permissions
+          </p>
+
+          {% if form.permissions.field.queryset.count > 0 %}
+          <div class="border rounded p-3 mb-4" style="max-height:260px; overflow-y:auto; background:#fafafa;">
+            {% for checkbox in form.permissions %}
+            <div class="form-check mb-1">
+              {{ checkbox.tag }}
+              <label class="form-check-label" for="{{ checkbox.id_for_label }}" style="font-size:.875rem;">
+                {{ checkbox.choice_label }}
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="alert alert-light border text-muted py-2 mb-4" style="font-size:.875rem;">
+            <i class="bi bi-info-circle me-1"></i>
+            No permissions defined yet.
+            <a href="{% url 'rbac:permission_create' %}">Create permissions first</a>, then assign them here.
+          </div>
+          {% endif %}
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> {{ action }} Role
+            </button>
+            <a href="{% url 'rbac:role_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

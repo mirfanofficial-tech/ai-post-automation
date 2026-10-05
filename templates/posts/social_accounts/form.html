@@ -1,0 +1,127 @@
+{% extends "posts/base_posts.html" %}
+
+{% block title %}Connect Account{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-slate-300 mx-1">/</span>
+  <a href="{% url 'posts:social_account_list' %}" class="hover:text-violet-600 transition">Social Accounts</a>
+  <span class="text-slate-300 mx-1">/</span>
+  <span class="text-slate-700 font-medium">Connect</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-lg">
+
+  {# ── Header ── #}
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'posts:social_account_list' %}"
+       class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition flex-shrink-0">
+      <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-slate-800">Connect Social Account</h1>
+      <p class="text-sm text-slate-500">Add a social media account to publish from</p>
+    </div>
+  </div>
+
+  {# ── Phase 3 notice ── #}
+  <div class="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5 text-sm text-amber-800">
+    <i data-lucide="zap" class="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500"></i>
+    <div>
+      <p class="font-semibold mb-0.5">OAuth coming in Phase 3</p>
+      <p class="text-amber-700 text-xs">
+        Full LinkedIn OAuth (one-click connect) will be available in Phase 3.
+        For now, you can manually register an account to set up the structure.
+      </p>
+    </div>
+  </div>
+
+  {# ── Available platforms ── #}
+  <div class="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+    {% for p in platforms %}
+    <div class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200 bg-white">
+      <span class="w-8 h-8 rounded-lg flex items-center justify-center
+        {% if p.code == 'linkedin' %}bg-blue-600
+        {% elif p.code == 'x' %}bg-slate-900
+        {% elif p.code == 'discord' %}bg-indigo-600
+        {% elif p.code == 'facebook' %}bg-blue-700
+        {% elif p.code == 'instagram' %}bg-pink-500
+        {% else %}bg-slate-500{% endif %}">
+        {% if p.code == 'linkedin' %}<i data-lucide="linkedin" class="w-4 h-4 text-white"></i>
+        {% elif p.code == 'x' %}<i data-lucide="twitter" class="w-4 h-4 text-white"></i>
+        {% else %}<i data-lucide="globe" class="w-4 h-4 text-white"></i>{% endif %}
+      </span>
+      <span class="text-xs text-slate-600 font-medium">{{ p.name }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Form card ── #}
+  <div class="bg-white rounded-2xl border border-slate-200 p-6">
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="mb-4">
+        {% include "posts/includes/alert.html" with message=form.non_field_errors.0 type="error" %}
+      </div>
+      {% endif %}
+
+      {# Platform #}
+      <div class="mb-4">
+        <label for="{{ form.platform.id_for_label }}"
+               class="block text-sm font-medium text-slate-700 mb-1.5">
+          Platform <span class="text-red-500">*</span>
+        </label>
+        {{ form.platform }}
+        {% if form.platform.errors %}
+        <p class="mt-1.5 text-xs text-red-600">{{ form.platform.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {# Account Label #}
+      <div class="mb-4">
+        <label for="{{ form.account_label.id_for_label }}"
+               class="block text-sm font-medium text-slate-700 mb-1.5">
+          Account Label <span class="text-red-500">*</span>
+        </label>
+        {{ form.account_label }}
+        <p class="mt-1.5 text-xs text-slate-400">{{ form.account_label.help_text }}</p>
+        {% if form.account_label.errors %}
+        <p class="mt-1 text-xs text-red-600">{{ form.account_label.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {# External Account ID #}
+      <div class="mb-6">
+        <label for="{{ form.external_account_id.id_for_label }}"
+               class="block text-sm font-medium text-slate-700 mb-1.5">
+          Platform Account ID
+          <span class="text-slate-400 font-normal">(optional)</span>
+        </label>
+        {{ form.external_account_id }}
+        <p class="mt-1.5 text-xs text-slate-400">{{ form.external_account_id.help_text }}</p>
+        {% if form.external_account_id.errors %}
+        <p class="mt-1 text-xs text-red-600">{{ form.external_account_id.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="{% url 'posts:social_account_list' %}"
+           class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">
+          Cancel
+        </a>
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition shadow-sm">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          Connect Account
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{# Reusable status badge. Usage: {% include "posts/includes/status_badge.html" with status=post.status %} #}
+{% if status == "draft" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Draft
+  </span>
+{% elif status == "scheduled" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-sky-100 text-sky-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>Scheduled
+  </span>
+{% elif status == "publishing" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>Publishing
+  </span>
+{% elif status == "published" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Published
+  </span>
+{% elif status == "partially_published" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Partial
+  </span>
+{% elif status == "failed" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Failed
+  </span>
+{% elif status == "pending" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>Pending
+  </span>
+{% elif status == "retrying" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>Retrying
+  </span>
+{% elif status == "success" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Success
+  </span>
+{% elif status == "cancelled" %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-medium">
+    <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>Cancelled
+  </span>
+{% else %}
+  <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-medium">
+    {{ status|title }}
+  </span>
+{% endif %}

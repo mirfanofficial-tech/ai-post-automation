@@ -1,0 +1,678 @@
+{% extends "posts/base_posts.html" %}
+{% load post_tags %}
+
+{% block title %}{{ post|truncatechars:40 }}{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-slate-300 mx-1">/</span>
+  <a href="{% url 'posts:post_list' %}" class="hover:text-violet-600 transition">All Posts</a>
+  <span class="text-slate-300 mx-1">/</span>
+  <span class="text-slate-700 font-medium truncate max-w-xs">{{ post|truncatechars:30 }}</span>
+{% endblock %}
+
+{% block content %}
+
+{# ── Page header ── #}
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+  <div class="flex items-start gap-3">
+    <a href="{% url 'posts:post_list' %}"
+       class="mt-0.5 w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition flex-shrink-0">
+      <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-slate-800 mb-1">
+        {% if post.title %}
+          {{ post.title|truncatechars:60 }}
+        {% else %}
+          Post #{{ post.pk }}
+        {% endif %}
+      </h1>
+      <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+        {% status_badge post.status %}
+        <span>Created {{ post.created_at|date:"M j, Y" }}</span>
+        {% if post.created_by %}
+          <span>by <span class="text-slate-600 font-medium">{{ post.created_by.username }}</span></span>
+        {% elif post.created_by_type == "ai_system" %}
+          <span class="text-violet-500 font-medium">AI generated</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 flex-shrink-0">
+    {% if "can_edit_posts" in user_permissions and post.status != "published" %}
+    <a href="{% url 'posts:post_edit' post.pk %}"
+       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 transition">
+      <i data-lucide="pencil" class="w-4 h-4"></i>Edit
+    </a>
+    {% endif %}
+    {% if "can_delete_posts" in user_permissions %}
+    {# ── Delete button — opens platform-aware SweetAlert2 modal ── #}
+    <button type="button" onclick="openDeleteModal()"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-sm font-medium text-red-600 transition">
+      <i data-lucide="trash-2" class="w-4 h-4"></i>Delete
+    </button>
+
+    {# Hidden form submitted by JS after user confirms #}
+    <form id="delete-post-form" method="post" action="{% url 'posts:post_unpublish' post.pk %}" class="hidden">
+      {% csrf_token %}
+      <div id="delete-target-inputs"></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+  {# ══════════ LEFT ══════════ #}
+  <div class="lg:col-span-2 space-y-5">
+
+    {# ── Content card ── #}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-4 h-4 text-violet-400"></i>Post Content
+      </h2>
+      <div class="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{{ post.content_plain }}</div>
+      {% if post.hashtags %}
+      <p class="mt-3 text-sm text-violet-600 font-medium">{{ post.hashtags }}</p>
+      {% endif %}
+    </div>
+
+    {# ── Media ── #}
+    {% if post.media.all %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i data-lucide="paperclip" class="w-4 h-4 text-violet-400"></i>
+        Attachments <span class="font-normal normal-case tracking-normal text-slate-400">({{ post.media.count }})</span>
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {% for m in post.media.all %}
+
+        {% if m.media_type == 'image' %}
+        {# ── Image tile ── #}
+        <div class="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video bg-slate-50">
+          <img src="{{ m.file.url }}" alt="Post image" class="w-full h-full object-cover">
+          {% if m.is_main %}
+          <span class="absolute top-1.5 left-1.5 text-xs bg-white/90 text-slate-600 rounded-md px-1.5 py-0.5 font-medium">Main</span>
+          {% endif %}
+          {# View button — always visible on hover #}
+          <a href="{{ m.file.url }}" target="_blank" rel="noopener"
+             class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <span class="bg-white/90 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 flex items-center gap-1">
+              <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>View
+            </span>
+          </a>
+          {# Delete — only on non-published posts #}
+          {% if "can_edit_posts" in user_permissions and post.status != "published" %}
+          <form method="post" action="{% url 'posts:media_delete' m.pk %}"
+                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition"
+                onsubmit="return confirm('Remove this file?')">
+            {% csrf_token %}
+            <button type="submit" class="w-6 h-6 rounded-md bg-red-500 hover:bg-red-600 flex items-center justify-center">
+              <i data-lucide="x" class="w-3 h-3 text-white"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+        {% elif m.media_type == 'video' %}
+        {# ── Video tile ── #}
+        <div class="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video bg-slate-900">
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <span class="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+              <i data-lucide="play" class="w-6 h-6 text-white ml-0.5"></i>
+            </span>
+            <span class="text-xs text-white/60 font-medium">{{ m.mime_type }}</span>
+          </div>
+          {# Open video #}
+          <a href="{{ m.file.url }}" target="_blank" rel="noopener"
+             class="absolute bottom-1.5 right-1.5 bg-white/90 rounded-lg px-2 py-0.5 text-xs font-medium text-slate-700 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+            <i data-lucide="external-link" class="w-3 h-3"></i>Open
+          </a>
+          {% if "can_edit_posts" in user_permissions and post.status != "published" %}
+          <form method="post" action="{% url 'posts:media_delete' m.pk %}"
+                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition"
+                onsubmit="return confirm('Remove this file?')">
+            {% csrf_token %}
+            <button type="submit" class="w-6 h-6 rounded-md bg-red-500 hover:bg-red-600 flex items-center justify-center">
+              <i data-lucide="x" class="w-3 h-3 text-white"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+        {% else %}
+        {# ── Document tile ── #}
+        <div class="relative group rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col items-center justify-center gap-2 aspect-video">
+          {# Icon by mime_type #}
+          {% if 'pdf' in m.mime_type %}
+            <i data-lucide="file-text" class="w-8 h-8 text-red-400"></i>
+            <span class="text-xs font-semibold text-red-400 uppercase tracking-wide">PDF</span>
+          {% elif 'word' in m.mime_type or 'document' in m.mime_type %}
+            <i data-lucide="file-text" class="w-8 h-8 text-blue-400"></i>
+            <span class="text-xs font-semibold text-blue-400 uppercase tracking-wide">DOC</span>
+          {% elif 'sheet' in m.mime_type or 'excel' in m.mime_type %}
+            <i data-lucide="file-spreadsheet" class="w-8 h-8 text-green-500"></i>
+            <span class="text-xs font-semibold text-green-500 uppercase tracking-wide">XLS</span>
+          {% elif 'presentation' in m.mime_type or 'powerpoint' in m.mime_type %}
+            <i data-lucide="file-text" class="w-8 h-8 text-orange-400"></i>
+            <span class="text-xs font-semibold text-orange-400 uppercase tracking-wide">PPT</span>
+          {% elif 'zip' in m.mime_type or 'rar' in m.mime_type or 'compressed' in m.mime_type %}
+            <i data-lucide="file-archive" class="w-8 h-8 text-yellow-500"></i>
+            <span class="text-xs font-semibold text-yellow-500 uppercase tracking-wide">ZIP</span>
+          {% elif 'text' in m.mime_type %}
+            <i data-lucide="file-code" class="w-8 h-8 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">TXT</span>
+          {% else %}
+            <i data-lucide="file" class="w-8 h-8 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">FILE</span>
+          {% endif %}
+          {# Filename (truncated) #}
+          <p class="text-xs text-slate-500 truncate w-full text-center px-1">{{ m.file.name|cut:"media/posts/"|truncatechars:20 }}</p>
+          {# View / download button #}
+          <a href="{{ m.file.url }}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium transition">
+            <i data-lucide="external-link" class="w-3 h-3"></i>View / Download
+          </a>
+          {% if "can_edit_posts" in user_permissions and post.status != "published" %}
+          <form method="post" action="{% url 'posts:media_delete' m.pk %}"
+                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition"
+                onsubmit="return confirm('Remove this file?')">
+            {% csrf_token %}
+            <button type="submit" class="w-6 h-6 rounded-md bg-red-500 hover:bg-red-600 flex items-center justify-center">
+              <i data-lucide="x" class="w-3 h-3 text-white"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# PHASE 8 — PLATFORM TARGETS STATUS #}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i data-lucide="share-2" class="w-4 h-4 text-violet-400"></i>
+        Platform Status
+        <span class="ml-auto font-normal normal-case tracking-normal text-slate-400">
+          {{ post.targets.count }} target{{ post.targets.count|pluralize }}
+        </span>
+      </h2>
+
+      {% if post.targets.all %}
+      <div class="space-y-4">
+        {% for target in post.targets.all %}
+
+        {# Target block — colour-coded by status #}
+        <div class="rounded-xl border p-4
+          {% if target.status == 'success' %}border-emerald-200 bg-emerald-50/50
+          {% elif target.status == 'failed' %}border-red-200 bg-red-50/50
+          {% elif target.status == 'retrying' %}border-orange-200 bg-orange-50/50
+          {% elif target.status == 'scheduled' %}border-sky-200 bg-sky-50/50
+          {% elif target.status == 'publishing' %}border-violet-200 bg-violet-50/50
+          {% elif target.status == 'cancelled' %}border-slate-200 bg-slate-50
+          {% else %}border-slate-200 bg-slate-50{% endif %}">
+
+          {# Header row #}
+          <div class="flex items-center gap-3 mb-3">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
+              {% platform_color target.social_account.platform.code %}">
+              <i data-lucide="{% platform_icon target.social_account.platform.code %}" class="w-4 h-4 text-white"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-slate-800">{{ target.social_account.platform.name }}</p>
+              <p class="text-xs text-slate-500 truncate">{{ target.social_account.account_label }}</p>
+            </div>
+            {% status_badge target.status %}
+          </div>
+
+          {# Details grid #}
+          <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs mb-3">
+            {% if target.scheduled_at %}
+            {% time_until target.scheduled_at as countdown %}
+            <div class="flex items-center gap-1.5 text-slate-500 col-span-2">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-sky-500 flex-shrink-0"></i>
+              Scheduled: <span class="font-medium text-slate-700">{{ target.scheduled_at|date:"M j, Y g:i A" }} UTC</span>
+              {% if countdown %}
+              <span class="ml-1 text-xs font-semibold px-1.5 py-0.5 rounded-md
+                {% if countdown == '00:00' %}bg-red-100 text-red-600{% else %}bg-sky-100 text-sky-700{% endif %}">
+                {{ countdown }}
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
+            {% if target.published_at %}
+            <div class="flex items-center gap-1.5 text-slate-500 col-span-2">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+              Published: <span class="font-medium text-slate-700">{{ target.published_at|date:"M j, Y g:i A" }} UTC</span>
+            </div>
+            {% endif %}
+            {% if target.attempt_count %}
+            <div class="flex items-center gap-1.5 text-slate-500">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 flex-shrink-0"></i>
+              Attempts: <span class="font-medium text-slate-700">{{ target.attempt_count }} / 4</span>
+            </div>
+            {% endif %}
+            {% if target.next_retry_at %}
+            <div class="flex items-center gap-1.5 text-orange-600">
+              <i data-lucide="timer" class="w-3.5 h-3.5 flex-shrink-0"></i>
+              Next retry: <span class="font-medium">{{ target.next_retry_at|date:"g:i A" }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Error message #}
+          {% if target.last_error %}
+          <div class="flex items-start gap-2 bg-red-100 rounded-lg px-3 py-2 mb-3 text-xs text-red-700">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
+            <span>{{ target.last_error }}</span>
+          </div>
+          {% endif %}
+
+          {# External post link #}
+          {% if target.external_post_url %}
+          <a href="{{ target.external_post_url }}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition mb-3">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            View on {{ target.social_account.platform.name }}
+          </a>
+          {% endif %}
+
+          {# Action buttons #}
+          {% if "can_publish_posts" in user_permissions %}
+          <div class="flex flex-wrap gap-2">
+
+            {% if target.status == "failed" %}
+            {# Retry button #}
+            <form method="post" action="{% url 'posts:target_retry' target.pk %}">
+              {% csrf_token %}
+              <button type="submit"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                Retry Now
+              </button>
+            </form>
+            {% endif %}
+
+            {% if target.status == "scheduled" %}
+            {# Cancel schedule button #}
+            <form method="post" action="{% url 'posts:target_cancel' target.pk %}"
+                  onsubmit="return confirm('Cancel this scheduled post?')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-medium transition">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                Cancel Schedule
+              </button>
+            </form>
+            {% endif %}
+
+            {% if target.status == "pending" or target.status == "cancelled" %}
+            {# Publish Now from detail page #}
+            <form method="post" action="{% url 'posts:post_publish_now' post.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="selected_accounts" value="{{ target.social_account_id }}">
+              <button type="submit"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                Publish Now
+              </button>
+            </form>
+            {% endif %}
+
+          </div>
+          {% endif %}
+
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      {# No targets yet — show publish panel #}
+      {% if "can_publish_posts" in user_permissions or "can_schedule_posts" in user_permissions %}
+      <div id="publish-panel">
+        {% include "posts/includes/publish_panel.html" with post=post social_accounts=social_accounts %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center py-10 text-center">
+        <i data-lucide="share-2" class="w-8 h-8 text-slate-300 mb-3"></i>
+        <p class="text-sm text-slate-500">No platforms selected yet.</p>
+        <p class="text-xs text-slate-400 mt-1">Edit this post to add platform targets.</p>
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {# ── Add more platforms panel (when targets already exist) ── #}
+      {% if post.targets.all and post.status != "published" %}
+      {% if "can_publish_posts" in user_permissions or "can_schedule_posts" in user_permissions %}
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <button onclick="document.getElementById('add-platform-panel').classList.toggle('hidden')"
+                class="inline-flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+          Publish to another account
+        </button>
+        <div id="add-platform-panel" class="hidden mt-3">
+          {% include "posts/includes/publish_panel.html" with post=post social_accounts=social_accounts %}
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+
+    </div>
+
+    {# ── Publishing History ── #}
+    {% for target in post.targets.all %}
+    {% if target.logs.all %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <i data-lucide="history" class="w-3.5 h-3.5 text-violet-400"></i>
+        {{ target.social_account.platform.name }} — Publishing History
+      </h2>
+      <div class="space-y-2">
+        {% for entry in target.logs.all %}
+        <div class="flex items-start gap-2.5 text-xs p-2.5 rounded-lg
+          {% if entry.status == 'success' %}bg-emerald-50{% else %}bg-red-50{% endif %}">
+          <span class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+            {% if entry.status == 'success' %}bg-emerald-100 text-emerald-600{% else %}bg-red-100 text-red-600{% endif %}">
+            {% if entry.status == 'success' %}
+              <i data-lucide="check" class="w-3 h-3"></i>
+            {% else %}
+              <i data-lucide="x" class="w-3 h-3"></i>
+            {% endif %}
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="font-semibold text-slate-700">Attempt #{{ entry.attempt_number }}</span>
+              <span class="text-slate-400">{{ entry.started_at|date:"M j, g:i A" }}</span>
+              {% if entry.response_type %}
+              <span class="text-slate-400 font-mono">{{ entry.response_type }}</span>
+              {% endif %}
+            </div>
+            {% if entry.response_message %}
+            <p class="text-slate-600">{{ entry.response_message }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+  </div>{# /left col #}
+
+  {# ══════════ RIGHT ══════════ #}
+  <div class="space-y-5">
+
+    {# Post metadata #}
+    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Details</h2>
+      <dl class="space-y-2.5 text-sm">
+        <div class="flex justify-between items-center">
+          <dt class="text-slate-400">Status</dt>
+          <dd>{% status_badge post.status %}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-400">Created</dt>
+          <dd class="text-slate-700">{{ post.created_at|date:"M j, Y" }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-400">Updated</dt>
+          <dd class="text-slate-700">{{ post.updated_at|date:"M j, Y" }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-400">Author</dt>
+          <dd class="text-slate-700">
+            {% if post.created_by %}{{ post.created_by.username }}
+            {% elif post.created_by_type == "ai_system" %}<span class="text-violet-600">AI System</span>
+            {% else %}—{% endif %}
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-400">Targets</dt>
+          <dd class="text-slate-700">{{ post.targets.count }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-400">Media</dt>
+          <dd class="text-slate-700">{{ post.media.count }} file{{ post.media.count|pluralize }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    {# Quick publish panel in sidebar (when post is a draft with no targets) #}
+    {% if post.status == "draft" and not post.targets.all %}
+    {% if social_accounts and "can_publish_posts" in user_permissions %}
+    <div class="bg-violet-50 border border-violet-200 rounded-2xl p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="send" class="w-4 h-4 text-violet-500"></i>
+        <p class="text-sm font-semibold text-violet-800">Ready to publish?</p>
+      </div>
+      <p class="text-xs text-violet-600 mb-3">This post is a draft. Use the platform panel on the left to publish or schedule it.</p>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {# Platform breakdown — quick pills #}
+    {% if post.targets.all %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Platforms</h2>
+      <div class="space-y-2">
+        {% for target in post.targets.all %}
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded flex items-center justify-center
+              {% platform_color target.social_account.platform.code %}">
+              <i data-lucide="{% platform_icon target.social_account.platform.code %}" class="w-3 h-3 text-white"></i>
+            </span>
+            <span class="text-slate-700 font-medium truncate max-w-[120px]">{{ target.social_account.account_label }}</span>
+          </div>
+          {% status_badge target.status %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /right #}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Social accounts data for publish panel ──
+const socialAccountsData = [
+  {% for acct in social_accounts %}
+  { id: {{ acct.pk }}, label: "{{ acct.account_label|escapejs }}", platform: "{{ acct.platform.code }}" },
+  {% endfor %}
+];
+
+// ── All targets with their current status (for delete modal logic) ──
+const allTargets = [
+  {% for target in post.targets.all %}
+  {
+    id:            {{ target.pk }},
+    status:        "{{ target.status }}",
+    platform:      "{{ target.social_account.platform.name|escapejs }}",
+    platformCode:  "{{ target.social_account.platform.code|escapejs }}",
+    accountLabel:  "{{ target.social_account.account_label|escapejs }}",
+    publishedAt:   "{{ target.published_at|date:'M j, Y g:i A'|escapejs }}",
+    supportsDelete: {% platform_supports_delete target.social_account.platform.code %},
+  },
+  {% endfor %}
+];
+
+// Only the successfully published ones shown in modal
+const successTargets = allTargets.filter(t => t.status === 'success');
+
+function openDeleteModal() {
+  let platformsHtml = '';
+
+  if (successTargets.length > 0) {
+    platformsHtml = `
+      <p class="text-sm text-slate-600 mb-3 text-left font-medium">
+        Select platforms to remove this post from:
+      </p>
+      <div class="space-y-2 mb-4" id="platform-checkboxes">
+    `;
+
+    successTargets.forEach(t => {
+      const iconBg  = t.platformCode === 'linkedin' ? 'bg-blue-600' : 'bg-slate-500';
+      const liIcon  = t.platformCode === 'linkedin'
+        ? `<svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>`
+        : `<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>`;
+
+      const noSupport = !t.supportsDelete
+        ? `<span class="text-xs text-amber-600 ml-auto">(removal not supported)</span>` : '';
+
+      platformsHtml += `
+        <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer
+                       hover:bg-slate-50 transition platform-row ${!t.supportsDelete ? 'opacity-60' : ''}"
+               data-id="${t.id}">
+          <input type="checkbox" class="platform-cb w-4 h-4 rounded text-red-500 border-slate-300"
+                 value="${t.id}" ${t.supportsDelete ? 'checked' : 'disabled'}
+                 onchange="updateDeleteLocalVisibility()">
+          <span class="w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0">
+            ${liIcon}
+          </span>
+          <div class="flex-1 text-left min-w-0">
+            <p class="text-sm font-medium text-slate-800">${t.platform}</p>
+            <p class="text-xs text-slate-400 truncate">${t.accountLabel} · ${t.publishedAt}</p>
+          </div>
+          ${noSupport}
+        </label>
+      `;
+    });
+
+    platformsHtml += `</div>`;
+
+    // "Delete locally" checkbox — shown only if checking all removable platforms
+    platformsHtml += `
+      <div id="local-delete-section" class="hidden border-t border-slate-200 pt-3 mt-1">
+        <label class="flex items-start gap-3 p-3 rounded-xl border border-red-200 bg-red-50 cursor-pointer">
+          <input type="checkbox" id="delete-local-cb" class="w-4 h-4 mt-0.5 rounded text-red-500 border-red-300">
+          <div>
+            <p class="text-sm font-semibold text-red-700">Also delete this post locally</p>
+            <p class="text-xs text-red-500 mt-0.5">
+              All platforms will be cleared — you can also remove the local record.
+              This cannot be undone.
+            </p>
+          </div>
+        </label>
+      </div>
+    `;
+
+  } else {
+    // No published platforms — only local delete available
+    platformsHtml = `
+      <p class="text-sm text-slate-500 mb-3">
+        This post has not been published to any platform yet.
+      </p>
+      <label class="flex items-start gap-3 p-3 rounded-xl border border-red-200 bg-red-50 cursor-pointer">
+        <input type="checkbox" id="delete-local-cb" class="w-4 h-4 mt-0.5 rounded text-red-500 border-red-300" checked>
+        <div>
+          <p class="text-sm font-semibold text-red-700">Delete this post locally</p>
+          <p class="text-xs text-red-500 mt-0.5">Removes the local record. Cannot be undone.</p>
+        </div>
+      </label>
+    `;
+  }
+
+  // Warning banner
+  platformsHtml += `
+    <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 mt-3">
+      <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      <span>
+        Unchecked platforms will <strong>keep</strong> their published post.
+        The local record is only deleted when all platforms are cleared and you tick the checkbox above.
+      </span>
+    </div>
+  `;
+
+  Swal.fire({
+    title: '<span class="text-red-600">Delete Post</span>',
+    html:  `<div class="text-left">${platformsHtml}</div>`,
+    showCancelButton:  true,
+    confirmButtonText: 'Confirm',
+    cancelButtonText:  'Cancel',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor:  '#64748b',
+    reverseButtons: true,
+    focusCancel:    true,
+    customClass: {
+      popup:   'rounded-2xl shadow-xl',
+      title:   'text-lg font-bold',
+      actions: 'gap-3',
+    },
+    didOpen: () => {
+      // Run once after modal renders so initial state is set
+      updateDeleteLocalVisibility();
+    },
+    preConfirm: () => {
+      const checkedBoxes = [...document.querySelectorAll('.platform-cb:checked')];
+      const deleteLocal  = document.getElementById('delete-local-cb')?.checked || false;
+
+      if (checkedBoxes.length === 0 && !deleteLocal) {
+        Swal.showValidationMessage('Select at least one platform to remove, or tick "Delete locally".');
+        return false;
+      }
+
+      return {
+        targetIds:   checkedBoxes.map(cb => cb.value),
+        deleteLocal: deleteLocal,
+      };
+    },
+  }).then(result => {
+    if (!result.isConfirmed || !result.value) return;
+
+    const { targetIds, deleteLocal } = result.value;
+    const container = document.getElementById('delete-target-inputs');
+    container.innerHTML = '';
+
+    targetIds.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'target_ids';
+      inp.value = id;
+      container.appendChild(inp);
+    });
+
+    if (deleteLocal) {
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'delete_local';
+      inp.value = '1';
+      container.appendChild(inp);
+    }
+
+    document.getElementById('delete-post-form').submit();
+  });
+}
+
+function updateDeleteLocalVisibility() {
+  const section = document.getElementById('local-delete-section');
+  if (!section) return;  // no published platforms — section not in DOM
+
+  const checkable = [...document.querySelectorAll('.platform-cb:not(:disabled)')];
+  const allChecked = checkable.length > 0 && checkable.every(cb => cb.checked);
+
+  // Also check if unsupported-platform targets exist (always remain active)
+  const hasUnsupportedActive = successTargets.some(t => !t.supportsDelete);
+
+  if (allChecked && !hasUnsupportedActive) {
+    section.classList.remove('hidden');
+  } else {
+    section.classList.add('hidden');
+    // Uncheck the local delete box if it gets hidden
+    const localCb = document.getElementById('delete-local-cb');
+    if (localCb) localCb.checked = false;
+  }
+}
+</script>
+{% endblock %}

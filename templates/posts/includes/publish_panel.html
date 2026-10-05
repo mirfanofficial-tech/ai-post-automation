@@ -1,0 +1,215 @@
+{# Reusable publish/schedule panel. Usage: {% include "posts/includes/publish_panel.html" with post=post social_accounts=social_accounts %} #}
+{% load post_tags %}
+
+{% if social_accounts %}
+<div class="space-y-3">
+
+  {# Account rows #}
+  {% for account in social_accounts %}
+
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden panel-row" data-acct="{{ account.pk }}">
+
+    <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition select-none">
+      <input type="checkbox" class="panel-checkbox w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+             data-acct="{{ account.pk }}" onchange="panelToggle(this)">
+      <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
+        {% platform_color account.platform.code %}">
+        <i data-lucide="{% platform_icon account.platform.code %}" class="w-3.5 h-3.5 text-white"></i>
+      </span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-slate-800 truncate">{{ account.account_label }}</p>
+        <p class="text-xs text-slate-400">{{ account.platform.name }}</p>
+      </div>
+    </label>
+
+    {# Mode selector — hidden until checkbox ticked #}
+    <div class="panel-options hidden border-t border-slate-100 px-4 py-3 bg-slate-50/50" id="panel-opts-{{ account.pk }}">
+      <div class="flex gap-3 mb-3">
+
+        {# Publish Now #}
+        <label class="flex items-center gap-2 flex-1 p-2.5 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-violet-300 transition">
+          <input type="radio" name="panel_mode_{{ account.pk }}" value="now" checked
+                 class="text-violet-600 focus:ring-violet-400"
+                 onchange="panelModeChange({{ account.pk }}, 'now')">
+          <div>
+            <p class="text-xs font-semibold text-slate-700">Publish Now</p>
+            <p class="text-xs text-slate-400">Send immediately</p>
+          </div>
+        </label>
+
+        {# Schedule #}
+        <label class="flex items-center gap-2 flex-1 p-2.5 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-violet-300 transition">
+          <input type="radio" name="panel_mode_{{ account.pk }}" value="schedule"
+                 class="text-violet-600 focus:ring-violet-400"
+                 onchange="panelModeChange({{ account.pk }}, 'schedule')">
+          <div>
+            <p class="text-xs font-semibold text-slate-700">Schedule</p>
+            <p class="text-xs text-slate-400">Pick date & time</p>
+          </div>
+        </label>
+      </div>
+
+      {# Schedule fields #}
+      <div class="panel-schedule-fields hidden grid grid-cols-2 gap-2" id="panel-sched-{{ account.pk }}">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Date</label>
+          <input type="date" id="panel-date-{{ account.pk }}"
+                 class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Time (UTC)</label>
+          <input type="time" id="panel-time-{{ account.pk }}"
+                 class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 transition">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {% endfor %}
+
+  {# Submit buttons #}
+  <div class="flex gap-2 pt-1">
+    <button type="button" onclick="submitPublishPanel({{ post.pk }})"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition shadow-sm">
+      <i data-lucide="send" class="w-4 h-4"></i>
+      Publish / Schedule Selected
+    </button>
+  </div>
+
+  {# Media note per selected account — driven by platform capabilities #}
+  {% if post.media.all %}
+  {% for account in social_accounts %}
+  {% platform_media_note account.platform.code as media_note %}
+  {% if media_note %}
+  <div class="flex items-start gap-2 mt-2 bg-sky-50 border border-sky-200 rounded-xl px-3 py-2.5 text-xs text-sky-700">
+    <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
+    <span><strong>{{ account.platform.name }}:</strong> {{ media_note }}</span>
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+</div>
+
+{# Hidden forms — one per action type, submitted by JS #}
+<form id="panel-publish-form-{{ post.pk }}" method="post" action="{% url 'posts:post_publish_now' post.pk %}" class="hidden">
+  {% csrf_token %}
+  <div id="panel-publish-inputs-{{ post.pk }}"></div>
+</form>
+
+<form id="panel-schedule-form-{{ post.pk }}" method="post" action="{% url 'posts:post_schedule' post.pk %}" class="hidden">
+  {% csrf_token %}
+  <div id="panel-schedule-inputs-{{ post.pk }}"></div>
+</form>
+
+{% else %}
+<div class="flex flex-col items-center py-8 text-center">
+  <i data-lucide="link-2-off" class="w-8 h-8 text-slate-300 mb-3"></i>
+  <p class="text-sm text-slate-500 font-medium mb-1">No social accounts connected</p>
+  <p class="text-xs text-slate-400 mb-3">Connect a social account to start publishing.</p>
+  <a href="{% url 'posts:social_account_list' %}"
+     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition">
+    <i data-lucide="link" class="w-3.5 h-3.5"></i>
+    Connect Account
+  </a>
+</div>
+{% endif %}
+
+<script>
+function panelToggle(cb) {
+  const acct    = cb.dataset.acct;
+  const opts    = document.getElementById('panel-opts-' + acct);
+  if (cb.checked) opts.classList.remove('hidden');
+  else            opts.classList.add('hidden');
+}
+
+function panelModeChange(acct, mode) {
+  const sf = document.getElementById('panel-sched-' + acct);
+  if (mode === 'schedule') sf.classList.remove('hidden');
+  else                     sf.classList.add('hidden');
+}
+
+function submitPublishPanel(postId) {
+  // Collect all checked accounts, split by mode
+  const nowAccts   = [];
+  const schedAccts = [];
+
+  document.querySelectorAll('.panel-checkbox:checked').forEach(cb => {
+    const acct = cb.dataset.acct;
+    const mode = document.querySelector(`input[name="panel_mode_${acct}"]:checked`)?.value || 'now';
+    if (mode === 'schedule') {
+      schedAccts.push({
+        id:   acct,
+        date: document.getElementById('panel-date-' + acct)?.value || '',
+        time: document.getElementById('panel-time-' + acct)?.value || '',
+      });
+    } else {
+      nowAccts.push(acct);
+    }
+  });
+
+  if (!nowAccts.length && !schedAccts.length) {
+    alert('Please select at least one account.');
+    return;
+  }
+
+  // Submit Publish Now accounts
+  if (nowAccts.length) {
+    const form     = document.getElementById('panel-publish-form-' + postId);
+    const container = document.getElementById('panel-publish-inputs-' + postId);
+    container.innerHTML = '';
+    nowAccts.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'selected_accounts';
+      inp.value = id;
+      container.appendChild(inp);
+    });
+    form.submit();
+  }
+
+  // Submit Schedule accounts — only if no publish-now (forms can't both submit)
+  if (schedAccts.length && !nowAccts.length) {
+    const form      = document.getElementById('panel-schedule-form-' + postId);
+    const container = document.getElementById('panel-schedule-inputs-' + postId);
+    container.innerHTML = '';
+    // Use first account's date/time (future: per-account scheduling)
+    const first = schedAccts[0];
+    schedAccts.forEach(s => {
+      const acctInp = document.createElement('input');
+      acctInp.type  = 'hidden';
+      acctInp.name  = 'selected_accounts';
+      acctInp.value = s.id;
+      container.appendChild(acctInp);
+    });
+    const dateInp = document.createElement('input');
+    dateInp.type  = 'hidden';
+    dateInp.name  = 'scheduled_date';
+    dateInp.value = first.date;
+    container.appendChild(dateInp);
+    const timeInp = document.createElement('input');
+    timeInp.type  = 'hidden';
+    timeInp.name  = 'scheduled_time';
+    timeInp.value = first.time;
+    container.appendChild(timeInp);
+    form.submit();
+  }
+
+  // Mixed: publish some now, schedule others — publish now first, show message
+  if (schedAccts.length && nowAccts.length) {
+    alert('Mixed publish: the "Publish Now" accounts will be sent first. Re-open the panel to schedule the others.');
+    const form     = document.getElementById('panel-publish-form-' + postId);
+    const container = document.getElementById('panel-publish-inputs-' + postId);
+    container.innerHTML = '';
+    nowAccts.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'selected_accounts';
+      inp.value = id;
+      container.appendChild(inp);
+    });
+    form.submit();
+  }
+}
+</script>

@@ -1,0 +1,134 @@
+{% extends "rbac/base_rbac.html" %}
+
+{% block title %}{{ action }} User{% endblock %}
+{% block page_title %}{{ action }} User{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center mb-4 gap-2">
+  <a href="{% url 'rbac:user_list' %}" class="btn btn-sm btn-outline-secondary border-0 p-1">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-semibold">{{ action }} User</h4>
+    {% if object %}
+      <p class="text-muted mb-0" style="font-size:.85rem;">Editing {{ object.username }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8 col-xl-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Account info -->
+          <p class="fw-semibold text-muted mb-3" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;">
+            Account Info
+          </p>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">
+                Username <span class="text-danger">*</span>
+              </label>
+              {{ form.username }}
+              {% if form.username.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.username.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">First Name</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">Last Name</label>
+              {{ form.last_name }}
+            </div>
+          </div>
+
+          <!-- Password -->
+          <p class="fw-semibold text-muted mb-3" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;">
+            Password{% if object %} <span class="fw-normal normal-case" style="text-transform:none;">(leave blank to keep current)</span>{% endif %}
+          </p>
+
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">
+                {% if object %}New Password{% else %}Password <span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.password1.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-medium" style="font-size:.875rem;">
+                {% if object %}Confirm New Password{% else %}Confirm Password{% endif %}
+              </label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.password2.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Role & flags -->
+          <p class="fw-semibold text-muted mb-3" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;">
+            Role & Permissions
+          </p>
+
+          <div class="mb-4">
+            <label class="form-label fw-medium" style="font-size:.875rem;">Assigned Role</label>
+            {{ form.role }}
+            <div class="form-text">A user inherits all permissions from their assigned role.</div>
+          </div>
+
+          <div class="d-flex gap-4 mb-4">
+            <div class="form-check">
+              {{ form.is_active }}
+              <label class="form-check-label" style="font-size:.875rem;">Active</label>
+              {% if form.is_active.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem;">{{ form.is_active.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="form-check">
+              {{ form.is_staff }}
+              <label class="form-check-label" style="font-size:.875rem;">Staff (Django admin access)</label>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> {{ action }} User
+            </button>
+            <a href="{% url 'rbac:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

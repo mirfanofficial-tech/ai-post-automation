@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Dashboard{% endblock %} — Postly</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}" />
+
+  <!-- Bootstrap 5.3 CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous"
+  />
+
+  <!-- Bootstrap Icons -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  />
+
+  <!-- App layout CSS -->
+  <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-wrapper">
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  {% include "includes/sidebar.html" %}
+
+  <!-- ══════════════════════════ MAIN COLUMN ════════════════════════ -->
+  <div class="main-column">
+
+    <!-- HEADER / TOPBAR -->
+    {% include "includes/header.html" %}
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    {% include "includes/footer.html" %}
+
+  </div><!-- /.main-column -->
+
+</div><!-- /.app-wrapper -->
+
+<!-- Bootstrap 5.3 JS bundle (includes Popper) -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmhD0Ob0ZMgv0BpgXD8HNa8CIFe"
+  crossorigin="anonymous"
+></script>
+
+<!-- Mobile sidebar toggle -->
+<script>
+  (function () {
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const sidebar   = document.getElementById('appSidebar');
+    const overlay   = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+      sidebar.classList.add('show');
+      overlay.classList.add('show');
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('show');
+      overlay.classList.remove('show');
+    }
+
+    if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+    if (overlay)   overlay.addEventListener('click', closeSidebar);
+  })();
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

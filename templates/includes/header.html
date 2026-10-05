@@ -1,0 +1,77 @@
+<header class="topbar">
+
+  <!-- Mobile: hamburger toggle -->
+  <button class="btn btn-sm btn-outline-secondary d-md-none border-0 p-1"
+          id="sidebarToggle"
+          aria-label="Toggle sidebar"
+          type="button">
+    <i class="bi bi-list fs-5"></i>
+  </button>
+
+  <!-- Page title injected by child templates -->
+  <span class="topbar-title">
+    {% block page_title %}Dashboard{% endblock %}
+  </span>
+
+  <!-- Right-side actions -->
+  <div class="ms-auto d-flex align-items-center gap-2">
+
+    <!-- Notification bell (placeholder) -->
+    <button class="btn btn-sm btn-outline-secondary border-0 position-relative"
+            type="button"
+            disabled
+            aria-label="Notifications">
+      <i class="bi bi-bell"></i>
+      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+            style="font-size:.6rem;">0</span>
+    </button>
+
+    {% if request.user.is_authenticated %}
+    <!-- ── Authenticated user section ── -->
+    <div class="d-flex align-items-center gap-2">
+
+      <!-- Profile link: avatar + username → /profile/ -->
+      <a href="{% url 'core:profile' %}"
+         class="d-flex align-items-center gap-2 text-decoration-none"
+         title="My Profile">
+        <div class="rounded-circle bg-primary bg-opacity-10 text-primary
+                    d-flex align-items-center justify-content-center fw-semibold"
+             style="width:32px;height:32px;flex-shrink:0;font-size:.75rem;">
+          {{ request.user.username|first|upper }}
+        </div>
+        <span class="d-none d-sm-inline text-dark fw-medium" style="font-size:.85rem;">
+          {{ request.user.username }}
+        </span>
+      </a>
+
+      <!-- Logout — POST form to prevent CSRF-free GET logout -->
+      <form method="post" action="{% url 'core:logout' %}" class="d-inline m-0">
+        {% csrf_token %}
+        <button type="submit"
+                class="btn btn-sm btn-outline-secondary border-0 d-flex align-items-center gap-1"
+                style="font-size:.8rem;"
+                title="Sign out">
+          <i class="bi bi-box-arrow-right"></i>
+          <span class="d-none d-sm-inline">Logout</span>
+        </button>
+      </form>
+
+    </div>
+    {% else %}
+    <!-- ── Guest fallback (should rarely be visible — dashboard is protected) ── -->
+    <div class="d-flex align-items-center gap-2">
+      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+           style="width:32px;height:32px;flex-shrink:0;">
+        <i class="bi bi-person-fill text-white" style="font-size:.85rem;"></i>
+      </div>
+      <a href="{% url 'core:login' %}"
+         class="btn btn-sm btn-outline-primary border-0"
+         style="font-size:.8rem;">
+        <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+      </a>
+    </div>
+    {% endif %}
+
+  </div><!-- /.ms-auto -->
+
+</header>
